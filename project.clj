@@ -1,4 +1,4 @@
-(defproject ceilingbounce/ceilingbounce "0.1.0-SNAPSHOT"
+(defproject com.flashlightdb/ceilingbounce "0.1.0-SNAPSHOT"
   :description "FIXME: Android project description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -12,7 +12,8 @@
   :plugins [[lein-droid "0.4.3"]]
 
   :dependencies [[org.clojure-android/clojure "1.7.0-r2"]
-                 [neko/neko "4.0.0-alpha5"]]
+                 [neko/neko "4.0.0-alpha5"]
+                 [org.clojure/data.csv "0.1.3"]]
   :profiles {:default [:dev]
 
              :dev
@@ -20,7 +21,7 @@
               {:dependencies [[org.clojure/tools.nrepl "0.2.10"]]
                :target-path "target/debug"
                :android {:aot :all-with-unused
-                         :rename-manifest-package "org.flashlightdb.ceilingbounce.debug"
+                         :rename-manifest-package "com.flashlightdb.ceilingbounce.debug"
                          :manifest-options {:app-name "ceilingbounce (debug)"}}}]
              :release
              [:android-common
@@ -42,7 +43,7 @@
             ;; available RAM.
             :dex-opts ["-JXmx4096M" "--incremental"]
 
-            :target-version "15"
+            :target-version "22"
             :aot-exclude-ns ["clojure.parallel" "clojure.core.reducers"
                              "cider.nrepl" "cider-nrepl.plugin"
                              "cider.nrepl.middleware.util.java.parser"

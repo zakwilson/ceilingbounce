@@ -1,4 +1,4 @@
-package org.flashlightdb.ceilingbounce;
+package com.flashlightdb.ceilingbounce;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -9,7 +9,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import neko.App;
 
-import org.flashlightdb.ceilingbounce.R;
+import com.flashlightdb.ceilingbounce.R;
 
 public class SplashActivity extends Activity {
 
@@ -22,7 +22,7 @@ public class SplashActivity extends Activity {
         if (firstLaunch) {
             firstLaunch = false;
             setupSplash();
-            App.loadAsynchronously("org.flashlightdb.ceilingbounce.MainActivity",
+            App.loadAsynchronously("com.flashlightdb.ceilingbounce.MainActivity",
                                    new Runnable() {
                                        @Override
                                        public void run() {
@@ -45,7 +45,7 @@ public class SplashActivity extends Activity {
     }
 
     public void proceed() {
-        startActivity(new Intent("org.flashlightdb.ceilingbounce.MAIN"));
+        startActivity(new Intent("com.flashlightdb.ceilingbounce.MAIN"));
         finish();
     }
 

@@ -4,6 +4,6 @@
   <string name="app_name">ceilingbounce</string>
   <string name="input_is_empty">Your input is empty</string>
   <string name="your_input_fmt">Your input: %1$s</string>
-  <string name="touch_me">Touch me</string>
+  <string name="start_test">Start Test</string>
 
 </resources>
