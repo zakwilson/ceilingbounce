@@ -64,47 +64,48 @@
         sm (cast SensorManager (.getSystemService ^Activity activity "sensor"))
         light-sensor (.getDefaultSensor ^SensorManager sm
                                         (Sensor/TYPE_LIGHT))
-        sensor-listener (reify SensorEventListener
-                          (onSensorChanged [activity evt]
-                            (try
-                              (let [pair
-                                    [(-> (. System nanoTime)
-                                          (- start-time)
-                                          (/ 100000000.0)
-                                          Math/floor
-                                          int)
-                                     (first (.values evt))]]
-                                (>!! writer-chan pair)
-                                (swap! output
-                                       conj
-                                       pair)
-                                (if (> 1 (first (.values evt)))
-                                  (when-not @battery-dead
-                                    (notify/cancel :battery-low)
-                                    (notify/fire :battery-dead
-                                                 (notify/notification {:ticker-text "Battery dead"
-                                                                       :content-title "Battery dead"
-                                                                       :content-text "Got 0 lux"
-                                                                       :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]}))
-                                    (compare-and-set! battery-dead false true))
-                                  (do (notify/cancel :battery-dead)
-                                      (compare-and-set! battery-dead true false)))
-                                (if (> 10 (first (.values evt)))
-                                  (when-not @battery-low
-                                    (notify/cancel :battery-dead)
-                                    (notify/fire :battery-low
-                                                 (notify/notification {:ticker-text "Battery low"
-                                                                       :content-title "Battery low"
-                                                                       :content-text "Got < 10 lux"
-                                                                       :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]}))
-                                    (compare-and-set! battery-low false true))
-                                  (do (notify/cancel :battery-low)
-                                      (compare-and-set! battery-low true false))))
-                              (catch Exception e
-                                (log/e "ERROR!" :exception e))))
-                          (onAccuracyChanged [activity s a]
-                                        ;do nothing
-                            ))]
+        sensor-listener
+        (reify SensorEventListener
+          (onSensorChanged [activity evt]
+            (try
+              (let [pair
+                    [(-> (. System nanoTime)
+                         (- start-time)
+                         (/ 100000000.0)
+                         Math/floor
+                         int)
+                     (first (.values evt))]]
+                (>!! writer-chan pair)
+                (swap! output
+                       conj
+                       pair)
+                (if (> 1 (first (.values evt)))
+                  (when-not @battery-dead
+                    (notify/cancel :battery-low)
+                    (notify/fire :battery-dead
+                                 (notify/notification {:ticker-text "Battery dead"
+                                                       :content-title "Battery dead"
+                                                       :content-text "Got 0 lux"
+                                                       :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]}))
+                    (compare-and-set! battery-dead false true))
+                  (do (notify/cancel :battery-dead)
+                      (compare-and-set! battery-dead true false)))
+                (if (> 10 (first (.values evt)))
+                  (when-not @battery-low
+                    (notify/cancel :battery-dead)
+                    (notify/fire :battery-low
+                                 (notify/notification {:ticker-text "Battery low"
+                                                       :content-title "Battery low"
+                                                       :content-text "Got < 10 lux"
+                                                       :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]}))
+                    (compare-and-set! battery-low false true))
+                  (do (notify/cancel :battery-low)
+                      (compare-and-set! battery-low true false))))
+              (catch Exception e
+                (log/e "ERROR!" :exception e))))
+          (onAccuracyChanged [activity s a]
+            (do-nothing)
+            ))]
 
     (go
       (while true
@@ -128,6 +129,10 @@
                        light-sensor
                        (SensorManager/SENSOR_DELAY_NORMAL))))
 
+(def peak-lux (atom 0))
+(defn reset-peak [_evt]
+  (swap! peak-lux min 0))
+
 (def main-layout
   [:linear-layout {:orientation :vertical
                    :layout-width :fill
@@ -139,23 +144,49 @@
    [:button {:id ::runtime-test
              :text "Start runtime test"
              :on-click runtime-test}]
+   ;; [:view {;:background "#eeeeeeeeee"
+   ;;         :layout-width :fill
+   ;;         :layout-height [1 :dip]
+   ;;         :layout-margin-top [5 :dip]
+   ;;         :layout-margin-bottom [5 :dip]}]
+   [:text-view {:id ::lux-now
+                :text-size [48 :dip]}]
+   [:relative-layout {:layout-width :fill
+                      :layout-height :fill}
+    [:text-view {:text "Peak: "
+                 ;:layout-width :fill
+                 :id ::peak-label}]
+    [:text-view {:id ::lux-peak
+                 ;:layout-width :fill
+                 :layout-to-right-of ::peak-label
+                 :text "0"}]
+    [:button {:id ::reset-button
+              :text "Reset peak"
+              :layout-margin-left [3 :dip]
+              :layout-below ::lux-peak
+              :on-click reset-peak}]]
    ])
 
 (defactivity com.flashlightdb.ceilingbounce.MainActivity
   :key :main
   (onCreate [this bundle]
 
-    ;; (def sm (cast SensorManager (.getSystemService ^Activity this "sensor")))
-    ;; (def light-sensor (.getDefaultSensor ^SensorManager sm
-    ;;                                      (Sensor/TYPE_LIGHT)))
+    (def sm (cast SensorManager (.getSystemService ^Activity this "sensor")))
+    (def light-sensor (.getDefaultSensor ^SensorManager sm
+                                         (Sensor/TYPE_LIGHT)))
 
-    ;; (def sensor-listener
-    ;;   (reify SensorEventListener
-    ;;     (onSensorChanged [this evt]
-    ;;       (neko.log/i (first (.values evt))))
-    ;;     (onAccuracyChanged [this s a]
-    ;;       ;do nothing
-    ;;       )))
+
+    (def sensor-listener
+      (let [activity this]
+           (reify SensorEventListener
+             (onSensorChanged [this evt]
+               (let [lux (first (.values evt))]
+                 (ui/config (find-view activity
+                                       ::lux-now)
+                            :text (str lux))
+                 (swap! peak-lux max lux)))
+             (onAccuracyChanged [this s a]
+               (do-nothing)))))
                 
     (.superOnCreate this bundle)
     (neko.debug/keep-screen-on this)
@@ -163,13 +194,17 @@
       (set-content-view! this
                          main-layout)))
 
-  ;; (onResume [this]
-  ;;           (.registerListener sm
-  ;;                              sensor-listener
-  ;;                              light-sensor
-  ;;                              (SensorManager/SENSOR_DELAY_NORMAL))
-  ;;           (.superOnResume this))
-  ;; (onPause [this]
-  ;;          (.unregisterListener sm sensor-listener)
-  ;;          (.superOnPause this))
+  (onResume [this]
+            (.registerListener sm
+                               sensor-listener
+                               light-sensor
+                               (SensorManager/SENSOR_DELAY_NORMAL))
+            (add-watch peak-lux :peak-ui (fn [_key _ref _old new]
+                                           (ui/config (find-view this
+                                                                 ::lux-peak)
+                                                      :text (str new))))
+            (.superOnResume this))
+  (onPause [this]
+           (.unregisterListener sm sensor-listener)
+           (.superOnPause this))
   )

@@ -1,4 +1,4 @@
-(defproject com.flashlightdb/ceilingbounce "0.1.1-SNAPSHOT"
+(defproject com.flashlightdb/ceilingbounce "0.1.2-SNAPSHOT"
   :description "FIXME: Android project description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
