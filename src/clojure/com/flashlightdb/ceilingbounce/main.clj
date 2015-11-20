@@ -162,7 +162,6 @@
                  :text "0"}]
     [:button {:id ::reset-button
               :text "Reset peak"
-              :layout-margin-left [3 :dip]
               :layout-below ::lux-peak
               :on-click reset-peak}]]
    ])
