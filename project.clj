@@ -1,4 +1,4 @@
-(defproject com.flashlightdb/ceilingbounce "0.1.0-SNAPSHOT"
+(defproject com.flashlightdb/ceilingbounce "0.1.1-SNAPSHOT"
   :description "FIXME: Android project description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -13,14 +13,29 @@
 
   :dependencies [[org.clojure-android/clojure "1.7.0-r2"]
                  [neko/neko "4.0.0-alpha5"]
-                 [org.clojure/data.csv "0.1.3"]]
+                 [org.clojure/data.csv "0.1.3"]
+                 [org.clojure/core.async "0.2.371"]]
   :profiles {:default [:dev]
 
              :dev
              [:android-common :android-user
-              {:dependencies [[org.clojure/tools.nrepl "0.2.10"]]
+              {:dependencies [[org.clojure/tools.nrepl "0.2.10"]
+                              ;[org.clojure/clojurescript "1.7.170"]
+                              ;[org.clojure/tools.reader "0.10.0"]
+                              ]
                :target-path "target/debug"
-               :android {:aot :all-with-unused
+               :android {:aot [neko.activity
+                               neko.debug
+                               neko.notify
+                               neko.resource
+                               neko.find-view
+                               neko.threading
+                               neko.log
+                               neko.ui
+                               clojure.data.csv
+                               clojure.java.io
+                               clojure.core.async
+                               com.flashlightdb.ceilingbounce.main]
                          :rename-manifest-package "com.flashlightdb.ceilingbounce.debug"
                          :manifest-options {:app-name "ceilingbounce (debug)"}}}]
              :release
