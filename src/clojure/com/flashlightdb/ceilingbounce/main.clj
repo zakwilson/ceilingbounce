@@ -23,6 +23,7 @@
              [android.app
               Activity
               Notification]
+             java.io.File
              neko.App))
 
 
@@ -40,18 +41,20 @@
               ~@body)))
 
 (defn do-nothing [])
+(def storage-dir "/storage/emulated/0/ceilingbounce/")
 
 (defn ^{:dynamic true} runtime-test [_evt]
   (ui/config (find-view (*a :main)
                         ::runtime-test)
-            :text "Test starting..."
+            :text "Test starting, please wait..."
             :on-click do-nothing)
+  (.mkdirs (File. storage-dir))
   (Thread/sleep 30000)
   (let [start-time (. System nanoTime)
         activity (*a :main)
         filename (.getText (find-view activity
                                       ::filename))
-        path (str "/storage/emulated/0/scratch/" filename "." start-time)
+        path (str storage-dir filename "." start-time)
         output (atom [])
         write-csv (fn [output-value]
                     (with-open [out-file (io/writer (str path ".csv"))]
