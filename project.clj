@@ -1,4 +1,4 @@
-(defproject com.flashlightdb/ceilingbounce "0.1.2-SNAPSHOT"
+(defproject com.flashlightdb/ceilingbounce "0.1.3-SNAPSHOT"
   :description "FIXME: Android project description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -51,7 +51,7 @@
                 :build-type :release}}]}
 
   :android {;; Specify the path to the Android SDK directory.
-            :sdk-path "/home/zak/code/android-sdk-linux"
+;            :sdk-path "/home/zak/code/android-sdk-linux"
 
             ;; Try increasing this value if dexer fails with
             ;; OutOfMemoryException. Set the value according to your
