@@ -12,7 +12,9 @@
               [clojure.core.async
                :as a
                :refer [>! <! >!! <!! go chan buffer close! thread
-                       alts! alts!! timeout]])
+                       alts! alts!! timeout]]
+              [analemma.charts :as charts]
+              [analemma.svg :as svg])
     (:import android.widget.EditText
              [android.hardware
               SensorManager
@@ -43,13 +45,30 @@
 (defn do-nothing [])
 (def storage-dir "/storage/emulated/0/ceilingbounce/")
 
+(defn chart-runtime [runtime-data]
+  (let [minutes (map #(/ (first %) 600.0) runtime-data)
+        raw-outputs (map second runtime-data)
+        max-output (max (apply max raw-outputs) 1) ; let's not div0
+        max-minute (apply max minutes)
+        outputs (map #(* 100.0 (/ % max-output)) raw-outputs)
+        chart-data (partition 2 (interleave minutes outputs))
+        chart (charts/xy-plot :width 1400 :height 1050
+                        :xmin 0
+                        :ymin 0
+                        :xmax (Math/ceil (* max-minute 1.1))
+                        :ymax (Math/ceil (* max-output 1.1)))]
+
+    (charts/add-points chart
+                       chart-data
+                       :size 2)))
+
 (defn ^{:dynamic true} runtime-test [_evt]
   (ui/config (find-view (*a :main)
                         ::runtime-test)
             :text "Test starting, please wait..."
             :on-click do-nothing)
   (.mkdirs (File. storage-dir))
-  (Thread/sleep 30000)
+  (Thread/sleep 30)
   (let [start-time (. System nanoTime)
         activity (*a :main)
         filename (.getText (find-view activity
@@ -117,8 +136,10 @@
     (defn ^{:dynamic true} stop-runtime-test [_evt]
       (.unregisterListener sm sensor-listener)
       (future (write-csv @output))
+      (spit (str path ".svg")
+            (charts/emit-svg (chart-runtime @output)))
       (ui/config (find-view activity
-                         ::runtime-test)
+                            ::runtime-test)
               :text "Run test"
               :on-click runtime-test))
 

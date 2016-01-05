@@ -1,6 +1,6 @@
-(defproject com.flashlightdb/ceilingbounce "0.1.3-SNAPSHOT"
-  :description "FIXME: Android project description"
-  :url "http://example.com/FIXME"
+(defproject com.flashlightdb/ceilingbounce "0.1.4-SNAPSHOT"
+  :description "Ceilingbounce - an app for flashlight testing"
+  :url "http://github.com/zakwilson/ceilingbounce"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
@@ -14,7 +14,9 @@
   :dependencies [[org.clojure-android/clojure "1.7.0-r2"]
                  [neko/neko "4.0.0-alpha5"]
                  [org.clojure/data.csv "0.1.3"]
-                 [org.clojure/core.async "0.2.371"]]
+                 [org.clojure/core.async "0.2.371"]
+                 [org.clojars.pallix/analemma "1.0.0-SNAPSHOT"]
+                 ]
   :profiles {:default [:dev]
 
              :dev
