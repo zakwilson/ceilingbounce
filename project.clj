@@ -38,6 +38,7 @@
                                clojure.java.io
                                clojure.core.async
                                clojure.tools.nrepl.server
+                               #"cider\..+"
                                com.flashlightdb.ceilingbounce.main]
                          :rename-manifest-package "com.flashlightdb.ceilingbounce.debug"
                          :manifest-options {:app-name "ceilingbounce (debug)"}}}]
