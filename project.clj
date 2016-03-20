@@ -37,6 +37,7 @@
                                clojure.data.csv
                                clojure.java.io
                                clojure.core.async
+                               clojure.tools.nrepl.server
                                com.flashlightdb.ceilingbounce.main]
                          :rename-manifest-package "com.flashlightdb.ceilingbounce.debug"
                          :manifest-options {:app-name "ceilingbounce (debug)"}}}]
@@ -58,8 +59,9 @@
             ;; Try increasing this value if dexer fails with
             ;; OutOfMemoryException. Set the value according to your
             ;; available RAM.
-            :dex-opts ["-JXmx4096M" "--incremental"]
-
+            :dex-opts ["-JXmx4096M"]
+            :multi-dex true
+            :multi-dex-proguard-conf-path "build/proguard-multi-dex.cfg"
             :target-version "22"
             :aot-exclude-ns ["clojure.parallel" "clojure.core.reducers"
                              "cider.nrepl" "cider-nrepl.plugin"
