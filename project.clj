@@ -10,13 +10,12 @@
   :java-source-paths ["src/java"]
   :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
   :plugins [[lein-droid "0.4.3"]]
-
+  :repositories [["jitpack" "https://jitpack.io"]]
   :dependencies [[org.clojure-android/clojure "1.7.0-r2"]
                  [neko/neko "4.0.0-alpha5"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/core.async "0.2.371"]
-                 [org.clojars.pallix/analemma "1.0.0-SNAPSHOT"]
-                 ]
+                 [com.github.PhilJay/MPAndroidChart "v2.2.3"]]
   :profiles {:default [:dev]
 
              :dev
@@ -60,6 +59,9 @@
             ;; Try increasing this value if dexer fails with
             ;; OutOfMemoryException. Set the value according to your
             ;; available RAM.
+
+            ; core-library here for tikkba, but this is probably a bad idea
+            
             :dex-opts ["-JXmx4096M"]
             :multi-dex true
             :multi-dex-proguard-conf-path "build/proguard-multi-dex.cfg"
