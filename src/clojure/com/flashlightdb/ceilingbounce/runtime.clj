@@ -25,9 +25,7 @@
               Activity
               Notification]
              java.io.File
-             neko.App
-             android.graphics.Bitmap
-             android.graphics.Canvas))
+             neko.App))
 
 (def battery-dead-notification
   {:ticker-text "Battery dead"
@@ -63,10 +61,8 @@
 (declare runtime-test)
 
 (def runtime-layout
-  [:linear-layout {:orientation :vertical
-                   :layout-width :fill
-                   :layout-height :wrap
-                   :def `layout-handle}
+  [:linear-layout (merge common/linear-layout-opts
+                         {:def `runtime-layout-handle})
    [:edit-text {:id ::filename
                 :hint "Name output file"
                 :layout-width :fill}]
@@ -95,32 +91,6 @@
               :on-click #'reset-peak}]]
    ])
 
-(defn chart-runtime [runtime-data]
-  (comment let [minutes (map #(/ (first %) 600.0) runtime-data) ; FIXME with new lib
-        raw-outputs (map second runtime-data)
-        max-output (max (apply max raw-outputs) 1) ; let's not div0
-        max-minute (apply max minutes)
-        outputs (map #(* 100.0 (/ % max-output)) raw-outputs)
-        chart-data (partition 2 (interleave minutes outputs))
-        chart (charts/xy-plot :width 1400 :height 1050
-                        :xmin 0
-                        :ymin 0
-                        :xmax (Math/ceil (* max-minute 1.1))
-                        :ymax (Math/ceil (* max-output 1.1)))]
-
-    (charts/add-points chart
-                       chart-data
-                       :size 2)))
-
-
-(defn write-png [path chart]
-  (with-open [out-file (io/output-stream path)]
-    (.compress (.getChartBitmap chart)
-               android.graphics.Bitmap$CompressFormat/PNG)
-    90
-    out-file))
-
-
 (defn runtime-test [_evt]
   (.mkdirs (File. common/storage-dir))
   (let [start-time (. System nanoTime)
@@ -131,8 +101,7 @@
                   "test"
                   dirname) ; TODO - this, more elegantly
         path (str common/storage-dir dirname "/")
-        csv-path (str path start-time ".csv")
-        png-path (str path start-time ".png")
+        csv-path (str path dirname start-time ".csv")
         output (atom [])
         writer-chan (chan 30)
         battery-dead (atom false)
@@ -191,9 +160,6 @@
     
     (defn stop-runtime-test [_evt]
       (.unregisterListener sm sensor-listener)
-      (future
-        (comment let [chart nil] ; FIXME
-          (write-png png-path chart)))
       (ui/config (find-view activity
                             (common/main-tag "runtime-test"))
               :text "Start runtime test"
