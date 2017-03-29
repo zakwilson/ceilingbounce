@@ -27,8 +27,7 @@
              java.io.File
              neko.App
              android.graphics.Bitmap
-             android.graphics.Canvas
-             com.github.mikephil.charting.charts.LineChart))
+             android.graphics.Canvas))
 
 (def battery-dead-notification
   {:ticker-text "Battery dead"
@@ -42,6 +41,59 @@
    :content-title "Battery low"
    :content-text "Got < 10 lux"
    :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]})
+
+(def peak-lux (atom 0))
+
+(defn handle-lux [activity lux]
+  (on-ui
+   (ui/config (find-view activity
+                         ::lux-now)
+              :text (str lux)))
+  (swap! peak-lux max lux))
+
+(defn handle-peak [activity lux]
+  (on-ui
+   (ui/config (find-view activity
+                         ::lux-peak)
+              :text (str lux))))
+
+(defn reset-peak [_evt]
+  (swap! peak-lux min 0))
+
+(declare runtime-test)
+
+(def runtime-layout
+  [:linear-layout {:orientation :vertical
+                   :layout-width :fill
+                   :layout-height :wrap
+                   :def `layout-handle}
+   [:edit-text {:id ::filename
+                :hint "Name output file"
+                :layout-width :fill}]
+   [:button {:id ::runtime-test
+             :text "Start runtime test"
+             :on-click #'runtime-test}]
+   ;; [:view {;:background "#eeeeeeeeee"
+   ;;         :layout-width :fill
+   ;;         :layout-height [1 :dip]
+   ;;         :layout-margin-top [5 :dip]
+   ;;         :layout-margin-bottom [5 :dip]}]
+   [:text-view {:id ::lux-now
+                :text-size [48 :dip]}]
+   [:relative-layout {:layout-width :fill
+                      :layout-height :fill}
+    [:text-view {:text "Peak: "
+                 ;:layout-width :fill
+                 :id ::peak-label}]
+    [:text-view {:id ::lux-peak
+                 ;:layout-width :fill
+                 :layout-to-right-of ::peak-label
+                 :text "0"}]
+    [:button {:id ::reset-button
+              :text "Reset peak"
+              :layout-below ::lux-peak
+              :on-click #'reset-peak}]]
+   ])
 
 (defn chart-runtime [runtime-data]
   (comment let [minutes (map #(/ (first %) 600.0) runtime-data) ; FIXME with new lib
@@ -156,3 +208,13 @@
                        sensor-listener
                        light-sensor
                        (SensorManager/SENSOR_DELAY_NORMAL))))
+
+(add-watch common/lux
+           :lux-instant-runtime
+           (fn [_key _ref _old new]
+             (handle-lux @common/main-activity new)))
+
+(add-watch peak-lux
+           :lux-peak-runtime
+           (fn [_key _ref _old new]
+             (handle-peak @common/main-activity new)))

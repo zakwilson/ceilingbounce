@@ -21,3 +21,5 @@
 
 (defn main-tag [x]
   (keyword (str "com.flashlightdb.ceilingbounce.main/" x)))
+
+(def lux (atom 0))
