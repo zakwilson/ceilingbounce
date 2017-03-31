@@ -58,6 +58,8 @@ On the runtime tab, enter a filename for the output file. If you don't, "test" w
 
 Once things are arranged properly, press the Start runtime test button. After 30 seconds, your default notification sound should play. Wait until the light is dim/off or you're finished testing what it is you wanted to test, then press the Stop test button. Your results should be in the `/sdcard/ceilingbounce/[your-filename]/` directory, which you can access with the file manager of your choice or by plugging the phone into a PC. The CSV columns are: raw reading, minutes, percent of 30 second value.
 
+CSV files will not be overwritten if you run several tests with the same name - each has a timestamp. Figuring out which is which is up to the user.
+
 ## Errata
 
 * Just opening the app in a bright environment can trigger 30 second events
