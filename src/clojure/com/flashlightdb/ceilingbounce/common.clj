@@ -38,7 +38,7 @@
    :layout-width :fill
    :layout-height :wrap})
 
-(def default-config {:lux-to-lumens 1 :effective-distance 10})
+(def default-config {:lux-to-lumens 1 :effective-distance 1})
 
 (def config (atom default-config))
 
