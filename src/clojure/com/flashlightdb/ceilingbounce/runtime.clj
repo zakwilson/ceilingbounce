@@ -39,6 +39,7 @@
                :text (str lux)))
 
 (defn reset-peak [_evt]
+  (common/reset-peak)
   (swap! peak-lux min 0))
 
 (declare runtime-test)
