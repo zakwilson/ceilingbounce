@@ -1,4 +1,4 @@
-(defproject com.flashlightdb/ceilingbounce "0.1.4-SNAPSHOT"
+(defproject com.flashlightdb/ceilingbounce "0.2.0-SNAPSHOT"
   :description "Ceilingbounce - an app for flashlight testing"
   :url "http://github.com/zakwilson/ceilingbounce"
   :license {:name "Eclipse Public License"
@@ -15,7 +15,9 @@
                  [neko/neko "4.0.0-alpha5"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/core.async "0.2.371"]
-                 [com.github.PhilJay/MPAndroidChart "v2.2.3"]]
+                 [com.github.PhilJay/MPAndroidChart "v2.2.3"]
+                 [amalloy/ring-buffer "1.2.1"]
+                 [overtone/at-at "1.2.0"]]
   :profiles {:default [:dev]
 
              :dev
@@ -41,6 +43,19 @@
                                com.flashlightdb.ceilingbounce.main]
                          :rename-manifest-package "com.flashlightdb.ceilingbounce.debug"
                          :manifest-options {:app-name "ceilingbounce (debug)"}}}]
+             :lean
+             [:dev
+              {:dependencies ^:replace [[org.skummet/clojure "1.7.0-r2"]]
+               :exclusions [[org.clojure/clojure]
+                            [org.clojure-android/clojure]]
+               :jvm-opts ["-Dclojure.compile.ignore-lean-classes=true"]
+               :global-vars ^:replace {clojure.core/*warn-on-reflection* true}
+               :android {:lean-compile true
+                         :proguard-execute true
+                         :proguard-conf-path "build/proguard-minify.cfg"
+
+                         :rename-manifest-package "com.flashlightdb.ceilingbounce.lean"
+                         :manifest-options {:app-name "ceilingbounce (lean)"}}}]
              :release
              [:android-common
               {:target-path "target/release"

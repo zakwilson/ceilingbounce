@@ -12,53 +12,98 @@
                :refer [>! <! >!! <!! go chan buffer close! thread
                        alts! alts!! timeout]]
               [com.flashlightdb.ceilingbounce.csv :as csv]
-              [com.flashlightdb.ceilingbounce.common :as common]
+              [com.flashlightdb.ceilingbounce.common :as common
+               :refer [identity*
+                       config
+                       main-activity
+                       do-nothing
+                       update-ui
+                       read-field
+                       update-main]]
               )
     (:import android.widget.EditText
-             [android.hardware
-              SensorManager
-              SensorEventListener
-              Sensor
-              SensorEvent
-              SensorListener]
              [android.app
-              Activity
-              Notification]
+              Activity]
              java.io.File
              neko.App))
 
-(def battery-dead-notification
-  {:ticker-text "Battery dead"
-   :content-title "Battery dead"
-   :content-text "Got 0 lux"
-   :action
-   [:activity "com.flashlightdb.ceilingbounce.MainActivity"]})
-
-(def battery-low-notification
-  {:ticker-text "Battery low"
-   :content-title "Battery low"
-   :content-text "Got < 10 lux"
-   :action [:activity "com.flashlightdb.ceilingbounce.MainActivity"]})
-
 (def peak-lux (atom 0))
 
-(defn handle-lux [activity lux]
-  (on-ui
-   (ui/config (find-view activity
-                         ::lux-now)
-              :text (str lux)))
+(defn handle-lux [lux]
+  (update-main ::lux-now
+               :text (str lux))
   (swap! peak-lux max lux))
 
-(defn handle-peak [activity lux]
-  (on-ui
-   (ui/config (find-view activity
-                         ::lux-peak)
-              :text (str lux))))
+(defn handle-peak [lux]
+  (update-main ::lux-peak
+               :text (str lux)))
 
 (defn reset-peak [_evt]
   (swap! peak-lux min 0))
 
 (declare runtime-test)
+
+(def output (atom []))
+
+(defn nanos-since [start-time]
+  (-> (. System nanoTime)
+      (- start-time)))
+
+(defn minutes-since [start-time]
+  (float (/ (nanos-since start-time) 60000000000)))
+
+(defn handle-lux-rt [lux start-time]
+  (let [offset (minutes-since start-time)]
+    (swap! output conj [lux offset])))
+
+(def lux-30s (atom 0))
+
+(defn write-line [lux minutes csv-path]
+  (csv/write-csv-line [lux minutes (float (* 100 (/ lux @lux-30s)))]
+                      csv-path))
+
+(defn handle-output [output-vec path csv-path]
+  (let [pair (last output-vec)
+        lux (first pair)
+        minutes (second pair)]
+    (when (and minutes ; NPE
+               (>= minutes 0.5))      
+      (when-not (.exists (io/as-file path))
+        (.mkdirs (File. path)))
+      (when-not (.exists (io/as-file csv-path))
+        (swap! lux-30s identity* lux)
+        (common/play-notification)
+        (doseq [p @output]
+          (write-line (first p) (second p) csv-path)))
+      (write-line lux minutes csv-path))))
+
+(defn stop-runtime-test [_evt]
+  (remove-watch common/lux :runtime-watch)
+  ; TODO do things with output before it's cleared
+  (swap! output identity* [])
+  (update-main ::runtime-test
+             :text "Start runtime test"
+             :on-click #'runtime-test))
+
+(defn runtime-test [_evt]
+  (.mkdirs (File. common/storage-dir))
+  (let [start-time (. System nanoTime)
+        dirname (read-field @main-activity ::filename)
+        dirname (if (empty? dirname)
+                  "test"
+                  dirname) ; TODO - this, more elegantly
+        path (str common/storage-dir dirname "/")
+        csv-path (str path dirname "-" start-time ".csv")]
+    (add-watch common/lux :runtime-watch
+               (fn [_key _ref _old new]
+                 (handle-lux-rt new start-time)))
+    (add-watch output :runtime-watch
+               (fn [_key _ref _old new]
+                 (handle-output new path csv-path)))
+
+    (update-main ::runtime-test
+            :text "Stop test"
+            :on-click #'stop-runtime-test)))
 
 (def runtime-layout
   [:linear-layout (merge common/linear-layout-opts
@@ -69,11 +114,6 @@
    [:button {:id ::runtime-test
              :text "Start runtime test"
              :on-click #'runtime-test}]
-   ;; [:view {;:background "#eeeeeeeeee"
-   ;;         :layout-width :fill
-   ;;         :layout-height [1 :dip]
-   ;;         :layout-margin-top [5 :dip]
-   ;;         :layout-margin-bottom [5 :dip]}]
    [:text-view {:id ::lux-now
                 :text-size [48 :dip]}]
    [:relative-layout {:layout-width :fill
@@ -91,96 +131,20 @@
               :on-click #'reset-peak}]]
    ])
 
-(defn runtime-test [_evt]
-  (.mkdirs (File. common/storage-dir))
-  (let [start-time (. System nanoTime)
-        activity @common/main-activity
-        dirname (.getText (find-view activity
-                                     (common/main-tag "filename")))
-        dirname (if (empty? dirname)
-                  "test"
-                  dirname) ; TODO - this, more elegantly
-        path (str common/storage-dir dirname "/")
-        csv-path (str path dirname start-time ".csv")
-        output (atom [])
-        writer-chan (chan 30)
-        battery-dead (atom false)
-        battery-low (atom false)
-        sm (cast SensorManager (.getSystemService ^Activity activity "sensor"))
-        light-sensor (.getDefaultSensor ^SensorManager sm
-                                        (Sensor/TYPE_LIGHT))
-        sensor-listener
-        (reify SensorEventListener
-          (onSensorChanged [activity evt]
-            (try
-              (let [pair
-                    [(-> (. System nanoTime)
-                         (- start-time)
-                         (/ 100000000.0)
-                         Math/floor
-                         int)
-                     (first (.values evt))]]
-                (>!! writer-chan pair)
-                (swap! output
-                       conj
-                       pair)
-                (if (> 1 (first (.values evt)))
-                  (when-not @battery-dead
-                    (notify/cancel :battery-low)
-                    (notify/fire :battery-dead
-                                 (notify/notification battery-dead-notification))
-                    (compare-and-set! battery-dead false true))
-                  (do (notify/cancel :battery-dead)
-                      (compare-and-set! battery-dead true false)))
-                (if (> 10 (first (.values evt)))
-                  (when-not @battery-low
-                    (notify/cancel :battery-dead)
-                    (notify/fire :battery-low
-                                 (notify/notification battery-low-notification))
-                    (compare-and-set! battery-low false true))
-                  (do (notify/cancel :battery-low)
-                      (compare-and-set! battery-low true false))))
-              (catch Exception e
-                (log/e "ERROR!" :exception e))))
-          
-          (onAccuracyChanged [activity s a]
-            (common/do-nothing)))
-        ]
+(defn activate-tab [& _args]
+  (on-ui
+   (set-content-view! @main-activity
+                      runtime-layout))
+  (add-watch common/lux
+             :lux-instant-runtime
+             (fn [_key _ref _old new]
+               (handle-lux new)))
+  (add-watch peak-lux
+             :lux-peak-runtime
+             (fn [_key _ref _old new]
+               (handle-peak new))))
 
-    (ui/config (find-view activity
-                          (common/main-tag "runtime-test"))
-               :text "Test starting, please wait..."
-               :on-click common/do-nothing)
-    
-    (.mkdirs (File. path))
-    
-    (go
-      (while true
-        (csv/write-csv-line (<! writer-chan) csv-path)))
-    
-    (defn stop-runtime-test [_evt]
-      (.unregisterListener sm sensor-listener)
-      (ui/config (find-view activity
-                            (common/main-tag "runtime-test"))
-              :text "Start runtime test"
-              :on-click #'runtime-test))
-
-    (ui/config (find-view activity
-                          (common/main-tag "runtime-test"))
-            :text "Stop test"
-            :on-click #'stop-runtime-test)
-    
-    (.registerListener sm
-                       sensor-listener
-                       light-sensor
-                       (SensorManager/SENSOR_DELAY_NORMAL))))
-
-(add-watch common/lux
-           :lux-instant-runtime
-           (fn [_key _ref _old new]
-             (handle-lux @common/main-activity new)))
-
-(add-watch peak-lux
-           :lux-peak-runtime
-           (fn [_key _ref _old new]
-             (handle-peak @common/main-activity new)))
+(defn deactivate-tab [& _args]
+  (remove-watch common/lux :lux-instant-runtime)
+  (remove-watch peak-lux :lux-peak-runtime)
+  (common/set-30s nil))
