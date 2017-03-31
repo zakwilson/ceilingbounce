@@ -6,7 +6,8 @@
             [neko.ui :as ui]
             [neko.threading :refer [on-ui]]
             [neko.find-view :refer [find-view]]
-            [amalloy.ring-buffer :refer [ring-buffer]])
+            [amalloy.ring-buffer :refer [ring-buffer]]
+            [clojure.java.io :as io])
   (:use overtone.at-at)
   (:import android.media.RingtoneManager))
 
@@ -44,8 +45,10 @@
 
 (defn read-config
   ([] (read-config config-path))
-  ([path] (swap! config merge
-                 (read-string (slurp path)))))
+  ([path]
+   (when (.exists (io/as-file path))
+       (swap! config merge
+              (read-string (slurp path))))))
 
 (defn write-config
   ([conf] (write-config config-path conf))
