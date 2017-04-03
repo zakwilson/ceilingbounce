@@ -10,14 +10,16 @@
   :java-source-paths ["src/java"]
   :javac-options ["-target" "1.6" "-source" "1.6" "-Xlint:-options"]
   :plugins [[lein-droid "0.4.6"]]
-  :repositories [["jitpack" "https://jitpack.io"]]
+  :repositories [["jitpack" "https://jitpack.io"]
+                 ["achartengine" "https://repository-achartengine.forge.cloudbees.com/snapshot/"]]
   :dependencies [[org.clojure-android/clojure "1.7.0-r2"]
                  [neko/neko "4.0.0-alpha5"]
                  [org.clojure/data.csv "0.1.3"]
                  [org.clojure/core.async "0.2.371"]
                  [com.github.PhilJay/MPAndroidChart "v2.2.3"]
                  [amalloy/ring-buffer "1.2.1"]
-                 [overtone/at-at "1.2.0"]]
+                 [overtone/at-at "1.2.0"]
+                 [org.achartengine/achartengine "1.1.0"]]
   :profiles {:default [:dev]
 
              :dev

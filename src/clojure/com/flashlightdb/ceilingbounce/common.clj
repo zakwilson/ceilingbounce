@@ -53,6 +53,7 @@
 (defn write-config
   ([conf] (write-config config-path conf))
   ([path conf]
+   (.mkdirs (io/as-file storage-dir)) ; ensures the default dir exists, not path
    (spit path conf)))
 
 (add-watch config :config-write-watch

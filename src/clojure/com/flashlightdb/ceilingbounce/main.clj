@@ -57,6 +57,7 @@
                 
     (.superOnCreate this bundle)
     (neko.debug/keep-screen-on this)
+    (runtime/setup-chart)
     (on-ui
      (try ; FIXME why does this error?
        (setup-action-bar this
