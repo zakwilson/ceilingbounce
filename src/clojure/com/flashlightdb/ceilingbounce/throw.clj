@@ -94,7 +94,7 @@
 
 (def throw-layout
   [:linear-layout (merge common/linear-layout-opts
-                         {:def `throw-layout-handle})
+                         {:id ::throw})
    [:linear-layout {:layout-width :fill
                     :layout-height :wrap
                     :orientation :horizontal}

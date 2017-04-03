@@ -65,16 +65,16 @@
                           :id ::action-bar
                           :tabs [[:tab {:text "Lumens"
                                         :tab-listener (tab-listener
-                                                       :on-tab-selected lumens/activate-tab
-                                                       :on-tab-unselected lumens/deactivate-tab)}]
+                                                       :on-tab-selected @#'lumens/activate-tab
+                                                       :on-tab-unselected @#'lumens/deactivate-tab)}]
                                  [:tab {:text "Throw"
                                         :tab-listener (tab-listener
-                                                       :on-tab-selected throw/activate-tab
-                                                       :on-tab-unselected throw/deactivate-tab)}]
+                                                       :on-tab-selected @#'throw/activate-tab
+                                                       :on-tab-unselected @#'throw/deactivate-tab)}]
                                  [:tab {:text "Runtime"
                                         :tab-listener (tab-listener
-                                                       :on-tab-selected runtime/activate-tab
-                                                       :on-tab-unselected runtime/deactivate-tab)}]]})
+                                                       :on-tab-selected @#'runtime/activate-tab
+                                                       :on-tab-unselected @#'runtime/deactivate-tab)}]]})
        (catch Exception e nil))))
 
   (onResume [this]
@@ -85,5 +85,4 @@
             (.superOnResume this))
   (onPause [this]
            (.unregisterListener sm sensor-listener)
-           (.superOnPause this))
-  )
+           (.superOnPause this)))

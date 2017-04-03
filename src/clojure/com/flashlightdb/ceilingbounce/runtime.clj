@@ -27,7 +27,10 @@
              java.io.File
              neko.App
              [android.graphics
-              Color]
+              Color
+              Bitmap
+              Bitmap$Config
+              Canvas]
              [android.view ViewGroup$LayoutParams]
              [org.achartengine.chart PointStyle]
              [org.achartengine.model XYSeries]
@@ -95,22 +98,23 @@
 
 (declare chart-view
          chart-series
-         renderer
+         series-renderer
          multi-renderer
-         chart-dataset)
+         chart-dataset
+         outfile-chart-view)
 
 (defn setup-chart []
   ; This has to be a function or (XyMultipleSeriesDataset.) fails at compile with
   ; java.lang.ExceptionInInitializerError
   (defonce chart-series (XYSeries. "Runtime"))
-  (defonce renderer (doto (XYSeriesRenderer.)
+  (defonce series-renderer (doto (XYSeriesRenderer.)
                   (.setColor Color/YELLOW)
                   (.setLineWidth 2.0)))
   (defonce multi-renderer (doto (XYMultipleSeriesRenderer.)
                         (.setAxisTitleTextSize 16)
                         (.setChartTitleTextSize 20)
                         (.setLabelsTextSize 16)
-                        (.addSeriesRenderer renderer)
+                        (.addSeriesRenderer series-renderer)
                         (.setXTitle "Minutes")
                         (.setYTitle "Relative Output")
                         (.setShowLegend false)
@@ -119,7 +123,10 @@
                         (.setYAxisMax 120)
                         (.setApplyBackgroundColor true)
                         (.setBackgroundColor Color/BLACK)
-))
+                        (.setYLabels 10)
+                        (.setPanLimits (double-array [0 20000 0 200]))
+                        (.setZoomLimits (double-array [0 20000 0 200]))
+                        ))
   (defonce chart-dataset (doto (XYMultipleSeriesDataset.)
                        (.addSeries chart-series)))
   (on-ui (defonce chart-view (doto (ChartFactory/getLineChartView @main-activity
@@ -128,7 +135,12 @@
                                (.setLayoutParams (ViewGroup$LayoutParams.
                                                   ViewGroup$LayoutParams/FILL_PARENT
                                                   ViewGroup$LayoutParams/FILL_PARENT))
-                               ))))
+                               ))
+         (defonce outfile-chart-view
+           (doto (ChartFactory/getLineChartView @main-activity
+                                                chart-dataset
+                                                multi-renderer)
+             (.setLayoutParams (ViewGroup$LayoutParams. 1400 1050))))))
 
 (defn add-point [x y]
   (-> chart-series
@@ -144,11 +156,13 @@
              (percent lux)))
 
 (defn save-chart [chart-path]
-  (let [chart-view (find-view @main-activity ::chart)]
-    (.setDrawingCacheEnabled chart-view true)
+  (let [bitmap (Bitmap/createBitmap 1400 1050 Bitmap$Config/ARGB_8888)
+        canvas (Canvas. bitmap)]
+    (on-ui (doto outfile-chart-view
+             (.layout 0 0 1400 1050)
+             (.draw canvas)))
     (with-open [o (io/output-stream chart-path)]
-      (-> chart-view
-          .getDrawingCache
+      (-> bitmap
           (.compress Bitmap$CompressFormat/PNG 90 o)))))
 
 (defn handle-output [output-vec dir-path csv-path]
@@ -163,17 +177,17 @@
         (swap! lux-30s identity* lux)
         (clear-chart)
         (common/play-notification)
-        (doseq [p @output]
-          (write-line (first p) (second p) csv-path)
-          (add-reading (second p) (first p))
-          ))
+        (future (doseq [p @output]
+                  (add-reading (second p) (first p))))
+        (future (doseq [p @output]
+                  (write-line (first p) (second p) csv-path))))
       (write-line lux minutes csv-path))
     (when (and minutes lux)
       (add-reading minutes lux))))
 
 (defn stop-runtime-test [_evt]
   (remove-watch common/lux :runtime-watch)
-  (save-chart (path @test-time "png"))
+  (future (save-chart (path @test-time "png")))
   ; TODO do things with output before it's cleared
   (swap! output identity* [])
   (update-main ::runtime-test
@@ -199,47 +213,52 @@
             :text "Stop test"
             :on-click #'stop-runtime-test)))
 
-(defn fix-chart-view []
-  (try
-    (-> chart-view .getParent (.removeView chart-view))
-    (catch Exception e nil)))
+(declare runtime-view)
 
-(defn mk-runtime-layout [] ; has to be this way because the compiler hates the graph
+(def runtime-layout [:linear-layout (merge common/linear-layout-opts
+                                           {:id ::runtime})
+                     [:edit-text {:id ::filename
+                                  :hint "Name output file"
+                                  :layout-width :fill}]
+                     [:button {:id ::runtime-test
+                               :text "Start runtime test"
+                               :on-click #'runtime-test}]
+                     [:text-view {:id ::lux-now
+                                  :text-size [48 :dip]}]
+                     [:relative-layout {:layout-width :fill
+                                        :layout-height :wrap
+                                        :layout-gravity 1}
+                      [:text-view {:text "Peak: "
+                                   :id ::peak-label}]
+                      [:text-view {:id ::lux-peak
+                                   :layout-to-right-of ::peak-label
+                                   :text "0"}]
+                      [:button {:id ::reset-button
+                                :text "Reset peak"
+                                :layout-below ::lux-peak
+                                :on-click #'reset-peak}]]
+                     [:linear-layout (merge common/linear-layout-opts
+                                            {:id ::chart
+                                             :layout-gravity 3
+                                             :layout-height :fill})]
+                     ])
+
+(defn fix-chart-view []
   (setup-chart)
-  (defonce runtime-layout [:linear-layout (merge common/linear-layout-opts
-                                                 {:def `runtime-layout-handle})
-                           [:edit-text {:id ::filename
-                                        :hint "Name output file"
-                                        :layout-width :fill}]
-                           [:button {:id ::runtime-test
-                                     :text "Start runtime test"
-                                     :on-click #'runtime-test}]
-                           [:text-view {:id ::lux-now
-                                        :text-size [48 :dip]}]
-                           [:relative-layout {:layout-width :fill
-                                              :layout-height :wrap
-                                              :layout-gravity 1}
-                            [:text-view {:text "Peak: "
-                                         :id ::peak-label}]
-                            [:text-view {:id ::lux-peak
-                                         :layout-to-right-of ::peak-label
-                                         :text "0"}]
-                            [:button {:id ::reset-button
-                                      :text "Reset peak"
-                                      :layout-below ::lux-peak
-                                      :on-click #'reset-peak}]]
-                           [:linear-layout (merge common/linear-layout-opts
-                                                  {:id ::chart
-                                                   :layout-gravity 3
-                                                   :layout-height :fill})
-                            chart-view]
-                           ]))
+  (on-ui
+   (try (-> chart-view
+            .getParent
+            (.removeView chart-view))
+        (catch Exception e nil))
+   (-> (find-view @main-activity ::chart)
+       (.addView chart-view))
+   (.invalidate (find-view @main-activity ::runtime))))
 
 (defn activate-tab [& _args]
-  (mk-runtime-layout)
   (on-ui
    (set-content-view! @main-activity
                       runtime-layout))
+  (fix-chart-view)
   (add-watch common/lux
              :lux-instant-runtime
              (fn [_key _ref _old new]

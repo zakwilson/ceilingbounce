@@ -63,7 +63,7 @@
 
 (def lumens-layout
   [:linear-layout (merge common/linear-layout-opts
-                         {:def `lumens-layout-handle})
+                         {:id ::lumens})
    [:linear-layout {:layout-width :fill
                     :layout-height :wrap
                     :orientation :horizontal}
