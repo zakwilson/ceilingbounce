@@ -6,13 +6,26 @@ Flashlight testing for Android
 
 Ceilingbounce uses the light sensor in your phone as a light meter for flashlight testing. The light meter in your phone is not accurate, so you must calibrate it if you want anything but relative numbers. Calibration should be done with a freshly charged battery on medium modes with several lights. Ideally, the same light should be tested with calibrated equipment, but if a test is available of the same *model* using calibrated equipment, that's better than nothing.
 
-Despite the name, measurements taken by bouncing a light off the ceiling aren't very useful. More accurate ~~testing~~ estimating setups are described below.
+Despite the name, measurements taken by bouncing a light off the ceiling aren't very useful except for runtime graphs. More accurate ~~testing~~ estimating setups are described below.
+
+## Frequently asked and anticipated questions
+
+* **How do I install this?** - Google "android sideloading".
+* **Will all this calibration stuff be easier in a future release?** - yes
+* **Will it be in the Play store?** - Probably, eventually.
+* **Will there be an iOS version?** - No. I don't have an iOS dev setup, Apple bans apps that use the light sensor from the app store and there's no *reasonable* way to sideload.
+* **Can you explain how to...?** - It's probably in this README. Please read it twice before you ask your question.
+* **Do you take pull requests?** - Yes, but please say what it is you want to do before you start coding.
+* **Why does it take so long to load?** - The current release is built with a configuration more suitable for development than end-users; future releases should load faster at some point.
+* **This is too hard, will you hold my hand and walk me through using it?** - No, this is a pre-release intended for users with moderately high technical knowledge of both Android phones and photometrics.
+* **Is this a good substitute for real test equipment?** - Not really, but it sure beats eyeballing it, and does a decent job making graphs and logging data.
+* **Is this app a flashlight?** - NO! Stop using your phone as a flashlight. Why are you even here?
 
 ## A note on light detection
 
 Several of the procedures described here call for turning on the light and waiting for something to happen after 30 seconds. There are certain limitations. The following will be detected as a light being turned on:
 
-* It's at least 10 lumens (or before calibration, 10 raw "lux" from the light meter, which may or may not be somewhere near 10 actual lux)
+* It's at least 10 lumens in your integrating device (or before calibration, 10 raw "lux" from the light meter, which may or may not be somewhere near 10 actual lux)
 * It's at least half the last peak value
 * It's at least twice the average of the last 20 values recorded (up to several values may be recorded per second)
 
@@ -52,7 +65,7 @@ For the next 10 seconds, Ceilingbounce will update the 30s value. This allows yo
 
 ### Making runtime graphs
 
-Ceilingbounce does not (yet) make graphes natively. Instead, it logs data to a CSV file, and you can use a spreadsheet program to make an XY plot. Use of spreadsheets is beyond the scope of this document.
+Ceilingbounce makes runtime graphs directly in the app. A graph is drawn in real-time during the test. The 100% point is adjusted at 30 seconds, and a larger PNG of the graph is saved upon pressing the stop button. The graph may be panned and zoomed, and this will be reflected in the saved file. A more sophisticated graph maker/editor will probably be added in the future.
 
 On the runtime tab, enter a filename for the output file. If you don't, "test" will be used. Position the phone and light in your integrating device, or if you haven't built one, bounce the light off the ceiling or otherwise arrange things such that light from the test flashlight reaches the light sensor, and other light does not. It's best if this produces a large number (in the thousands for high modes) on the instant readout, but should not max out the sensor (you'll notice that the number doesn't change no matter what you do to the light).
 
