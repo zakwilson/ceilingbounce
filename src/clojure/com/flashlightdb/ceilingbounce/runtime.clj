@@ -185,7 +185,6 @@
       (when-not (.exists (io/as-file csv-path))
         (swap! lux-30s identity* lux)
         (clear-chart)
-        (common/play-notification)
         (future (doseq [p @output]
                   (add-reading (second p) (first p))))
         (future (doseq [p @output]

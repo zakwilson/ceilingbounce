@@ -69,9 +69,9 @@ Ceilingbounce makes runtime graphs directly in the app. A graph is drawn in real
 
 On the runtime tab, enter a filename for the output file. If you don't, "test" will be used. Position the phone and light in your integrating device, or if you haven't built one, bounce the light off the ceiling or otherwise arrange things such that light from the test flashlight reaches the light sensor, and other light does not. It's best if this produces a large number (in the thousands for high modes) on the instant readout, but should not max out the sensor (you'll notice that the number doesn't change no matter what you do to the light).
 
-Once things are arranged properly, press the Start runtime test button. After 30 seconds, your default notification sound should play. Wait until the light is dim/off or you're finished testing what it is you wanted to test, then press the Stop test button. Your results should be in the `/sdcard/ceilingbounce/[your-filename]/` directory, which you can access with the file manager of your choice or by plugging the phone into a PC. The CSV columns are: raw reading, minutes, percent of 30 second value.
+Once things are arranged properly, press the Start runtime test button. After 30 seconds, you should see the graph redraw. Wait until the light is dim/off or you're finished testing what it is you wanted to test, then press the Stop test button. Your results should be in the `/sdcard/ceilingbounce/[your-filename]/` directory, which you can access with the file manager of your choice or by plugging the phone into a PC. The CSV columns are: raw reading, minutes, percent of 30 second value.
 
-CSV files will not be overwritten if you run several tests with the same name - each has a timestamp. Figuring out which is which is up to the user.
+Output files will not be overwritten if you run several tests with the same name - each has a timestamp. Figuring out which is which is up to the user.
 
 ## Errata
 
