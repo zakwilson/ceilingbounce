@@ -20,6 +20,7 @@
                        update-ui
                        read-field
                        update-main]]
+              [amalloy.ring-buffer :refer [ring-buffer]]
               )
     (:import android.widget.EditText
              [android.app
@@ -39,10 +40,12 @@
               XYMultipleSeriesRenderer
               XYSeriesRenderer]
              [org.achartengine ChartFactory]
-             [android.graphics Bitmap$CompressFormat]))
+             [android.graphics Bitmap$CompressFormat])
+    (:use overtone.at-at))
 
 (def peak-lux (atom 0))
 (def test-time (atom 0))
+(def runtime-pool (mk-pool))
 
 (defn handle-lux [lux]
   (update-main ::lux-now
@@ -59,7 +62,7 @@
 
 (declare runtime-test)
 
-(def output (atom []))
+(def output (atom (ring-buffer 1000)))
 
 (defn nanos-since [start-time]
   (-> (. System nanoTime)
@@ -68,9 +71,12 @@
 (defn minutes-since [start-time]
   (float (/ (nanos-since start-time) 60000000000)))
 
-(defn handle-lux-rt [lux start-time]
+#_(defn handle-lux-rt [lux start-time]
   (let [offset (minutes-since start-time)]
     (swap! output conj [lux offset])))
+
+(defn sample-lux []
+  (swap! output conj [@common/lux (minutes-since @test-time)]))
 
 (def lux-30s (atom 0))
 
@@ -118,12 +124,13 @@
                         (.setXTitle "Minutes")
                         (.setYTitle "Relative Output")
                         (.setShowLegend false)
-                        (.setZoomEnabled false)
+                        (.setZoomEnabled true)
                         (.setYAxisMin 0)
                         (.setYAxisMax 120)
                         (.setApplyBackgroundColor true)
                         (.setBackgroundColor Color/BLACK)
                         (.setYLabels 10)
+                        (.setXLabels 10)
                         (.setPanLimits (double-array [0 20000 0 200]))
                         (.setZoomLimits (double-array [0 20000 0 200]))
                         ))
@@ -156,6 +163,8 @@
              (percent lux)))
 
 (defn save-chart [chart-path]
+  ; While the chart view should have a .toBitmap method, it returns nil
+  ; probably because the larger chart is not drawn
   (let [bitmap (Bitmap/createBitmap 1400 1050 Bitmap$Config/ARGB_8888)
         canvas (Canvas. bitmap)]
     (on-ui (doto outfile-chart-view
@@ -190,6 +199,7 @@
   (future (save-chart (path @test-time "png")))
   ; TODO do things with output before it's cleared
   (swap! output identity* [])
+  (stop-and-reset-pool! runtime-pool)
   (update-main ::runtime-test
              :text "Start runtime test"
              :on-click #'runtime-test))
@@ -203,9 +213,13 @@
     (swap! lux-30s identity* @common/lux) ; start the graph with this, update later
     (clear-chart)
     (.setChartTitle multi-renderer (read-field @main-activity ::filename))
-    (add-watch common/lux :runtime-watch
+    #_(add-watch common/lux :runtime-watch
                (fn [_key _ref _old new]
                  (handle-lux-rt new start-time)))
+    (every 1000
+           sample-lux
+           runtime-pool
+           :desc "Sample the light meter reading")
     (add-watch output :runtime-watch
                (fn [_key _ref _old new]
                  (handle-output new dir-path csv-path)))
