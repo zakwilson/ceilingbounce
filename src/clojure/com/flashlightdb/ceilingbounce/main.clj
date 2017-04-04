@@ -81,7 +81,7 @@
             (.registerListener sm
                                sensor-listener
                                light-sensor
-                               (SensorManager/SENSOR_DELAY_NORMAL))
+                               200000)
             (.superOnResume this))
   (onPause [this]
            (.unregisterListener sm sensor-listener)
