@@ -141,7 +141,7 @@
 
 (defn save-chart [chart-path]
   ; While the chart view should have a .toBitmap method, it returns nil
-  ; probably because the larger chart is not drawn
+  ; probably because the larger chart is not drawn, so we draw it manually
   (let [bitmap (Bitmap/createBitmap 1400 1050 Bitmap$Config/ARGB_8888)
         canvas (Canvas. bitmap)
         srenderer (make-series-renderer line-props)
@@ -151,12 +151,14 @@
                  :ChartTitle 
                  (read-field @main-activity ::filename))
     (on-ui (doto view
-             (.layout 0 0 1380 1030)
+             (.layout 0 0 1400 1050)
              (.draw canvas)
-             .zoomReset))
-    (with-open [o (io/output-stream chart-path)]
-      (-> bitmap
-          (.compress Bitmap$CompressFormat/PNG 90 o)))))
+             .zoomReset)
+           ; writing the bitmap has to happen after the drawing stuff is done
+           ; but let's not block the UI thread
+           (future (with-open [o (io/output-stream chart-path)]
+                     (-> bitmap
+                         (.compress Bitmap$CompressFormat/PNG 90 o)))))))
 
 (defn handle-output [output-vec dir-path csv-path]
   (let [pair (last output-vec)
