@@ -29,7 +29,7 @@
   (keyword (str "com.flashlightdb.ceilingbounce.main/" x)))
 
 (defn identity* [_ replacement]
-  replacement)
+  replacement) 
 
 
 (def lux (atom 0))

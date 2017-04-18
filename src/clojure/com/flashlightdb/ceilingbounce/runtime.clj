@@ -25,27 +25,21 @@
     (:import android.widget.EditText
              [android.app
               Activity]
-             java.io.File
-             neko.App
              [android.graphics
               Color
               Bitmap
+              Canvas
               Bitmap$Config
-              Canvas]
-             [android.view ViewGroup$LayoutParams]
-             [org.achartengine.chart PointStyle]
-             [org.achartengine.model XYSeries]
-             [org.achartengine.model XYMultipleSeriesDataset]
-             [org.achartengine.renderer
-              XYMultipleSeriesRenderer
-              XYSeriesRenderer]
-             [org.achartengine ChartFactory]
-             [android.graphics Bitmap$CompressFormat])
-    (:use overtone.at-at))
+              Bitmap$CompressFormat]
+             java.io.File
+             neko.App)
+    (:use overtone.at-at
+          com.flashlightdb.ceilingbounce.graph))
 
 (def peak-lux (atom 0))
 (def test-time (atom 0))
 (def runtime-pool (mk-pool))
+(def output-file-name (atom "Name output file"))
 
 (defn handle-lux [lux]
   (update-main ::lux-now
@@ -102,74 +96,64 @@
   (let [dirname (get-dir-name)]
     (str common/storage-dir dirname "/" dirname "-" start-time "." ext)))
 
-(declare chart-view
-         chart-series
-         series-renderer
-         multi-renderer
-         chart-dataset
-         outfile-chart-view)
+(def graph-props
+  {:AxisTitleTextSize 16
+   :ChartTitleTextSize 20
+   :LabelsTextSize 16
+   :XTitle "Minutes"
+   :YTitle "Relative Output"
+   :ShowLegend false
+   :ZoomEnabled false
+   :YAxisMin 0
+   :ApplyBackgroundColor true
+   :BackgroundColor Color/BLACK
+   :YLabels 10
+   :XLabels 10})
+
+(def line-props
+  {:Color Color/YELLOW
+   :LineWidth 2.0})
+
+(declare live-chart)
 
 (defn setup-chart []
   ; This has to be a function or (XyMultipleSeriesDataset.) fails at compile with
   ; java.lang.ExceptionInInitializerError
-  (defonce chart-series (XYSeries. "Runtime"))
-  (defonce series-renderer (doto (XYSeriesRenderer.)
-                  (.setColor Color/YELLOW)
-                  (.setLineWidth 2.0)))
-  (defonce multi-renderer (doto (XYMultipleSeriesRenderer.)
-                        (.setAxisTitleTextSize 16)
-                        (.setChartTitleTextSize 20)
-                        (.setLabelsTextSize 16)
-                        (.addSeriesRenderer series-renderer)
-                        (.setXTitle "Minutes")
-                        (.setYTitle "Relative Output")
-                        (.setShowLegend false)
-                        (.setZoomEnabled true)
-                        (.setYAxisMin 0)
-                        (.setYAxisMax 120)
-                        (.setApplyBackgroundColor true)
-                        (.setBackgroundColor Color/BLACK)
-                        (.setYLabels 10)
-                        (.setXLabels 10)
-                        (.setPanLimits (double-array [0 20000 0 200]))
-                        (.setZoomLimits (double-array [0 20000 0 200]))
-                        ))
-  (defonce chart-dataset (doto (XYMultipleSeriesDataset.)
-                       (.addSeries chart-series)))
-  (on-ui (defonce chart-view (doto (ChartFactory/getLineChartView @main-activity
-                                                                  chart-dataset
-                                                                  multi-renderer)
-                               (.setLayoutParams (ViewGroup$LayoutParams.
-                                                  ViewGroup$LayoutParams/FILL_PARENT
-                                                  ViewGroup$LayoutParams/FILL_PARENT))
-                               ))
-         (defonce outfile-chart-view
-           (doto (ChartFactory/getLineChartView @main-activity
-                                                chart-dataset
-                                                multi-renderer)
-             (.setLayoutParams (ViewGroup$LayoutParams. 1400 1050))))))
 
-(defn add-point [x y]
-  (-> chart-series
-      (.add x y))
-  (.repaint chart-view))
+  (defonce live-chart
+    (let [series (make-series "Runtime")
+          dataset (make-dataset series)
+          srenderer (make-series-renderer line-props)
+          mrenderer (make-multi-renderer graph-props srenderer)
+          view (make-view @main-activity dataset mrenderer)]
+      (->LineGraph
+       series
+       srenderer
+       mrenderer
+       dataset
+       view))))
 
-(defn clear-chart []
-  (.clear chart-series)
-  (.repaint chart-view))
 
 (defn add-reading [minutes lux]
-  (add-point minutes
+  (add-point live-chart
+             minutes
              (percent lux)))
 
 (defn save-chart [chart-path]
   ; While the chart view should have a .toBitmap method, it returns nil
   ; probably because the larger chart is not drawn
   (let [bitmap (Bitmap/createBitmap 1400 1050 Bitmap$Config/ARGB_8888)
-        canvas (Canvas. bitmap)]
-    (on-ui (doto outfile-chart-view
-             (.layout 0 0 1400 1050)
-             (.draw canvas)))
+        canvas (Canvas. bitmap)
+        srenderer (make-series-renderer line-props)
+        mrenderer (make-multi-renderer graph-props srenderer)
+        view (make-view @main-activity (:dataset live-chart) mrenderer)]
+    (call-setter mrenderer
+                 :ChartTitle 
+                 (read-field @main-activity ::filename))
+    (on-ui (doto view
+             (.layout 0 0 1380 1030)
+             (.draw canvas)
+             .zoomReset))
     (with-open [o (io/output-stream chart-path)]
       (-> bitmap
           (.compress Bitmap$CompressFormat/PNG 90 o)))))
@@ -184,19 +168,26 @@
         (.mkdirs (io/as-file dir-path)))
       (when-not (.exists (io/as-file csv-path))
         (swap! lux-30s identity* lux)
-        (clear-chart)
+        (clear-chart live-chart)
         (future (doseq [p @output]
                   (add-reading (second p) (first p))))
         (future (doseq [p @output]
                   (write-line (first p) (second p) csv-path))))
       (write-line lux minutes csv-path))
     (when (and minutes lux)
-      (add-reading minutes lux))))
+      (add-reading minutes lux))
+    (when (and minutes ; slow down the sample rate so the graph doesn't hang
+               (> minutes 100)
+               (< minutes 100.1))
+      (stop-and-reset-pool! runtime-pool)
+      (every 10000
+             sample-lux
+             runtime-pool
+             :desc "Sample the light meter reading"))))
 
 (defn stop-runtime-test [_evt]
   (remove-watch common/lux :runtime-watch)
   (future (save-chart (path @test-time "png")))
-  ; TODO do things with output before it's cleared
   (swap! output identity* [])
   (stop-and-reset-pool! runtime-pool)
   (update-main ::runtime-test
@@ -210,8 +201,10 @@
         csv-path (path start-time "csv")]
     (swap! test-time max start-time)
     (swap! lux-30s identity* @common/lux) ; start the graph with this, update later
-    (clear-chart)
-    (.setChartTitle multi-renderer (read-field @main-activity ::filename))
+    (clear-chart live-chart)
+    (call-setter (:multi-renderer live-chart)
+                 :ChartTitle 
+                 (read-field @main-activity ::filename))
     #_(add-watch common/lux :runtime-watch
                (fn [_key _ref _old new]
                  (handle-lux-rt new start-time)))
@@ -232,6 +225,7 @@
                                            {:id ::runtime})
                      [:edit-text {:id ::filename
                                   :hint "Name output file"
+                                  :text @output-file-name
                                   :layout-width :fill}]
                      [:button {:id ::runtime-test
                                :text "Start runtime test"
@@ -256,22 +250,24 @@
                                              :layout-height :fill})]
                      ])
 
-(defn fix-chart-view []
-  (setup-chart)
-  (on-ui
-   (try (-> chart-view
-            .getParent
-            (.removeView chart-view))
-        (catch Exception e nil))
-   (-> (find-view @main-activity ::chart)
-       (.addView chart-view))
-   (.invalidate (find-view @main-activity ::runtime))))
+(defn activate-chart []
+  (on-ui (try (-> (find-view @main-activity ::chart)
+                  (.addView (:view live-chart)))
+              (catch Exception e nil))))
+
+(defn deactivate-chart []
+  (on-ui (try (-> (:view live-chart)
+                  .getParent
+                  (.removeView (:view live-chart)))
+              (catch Exception e nil))))
 
 (defn activate-tab [& _args]
   (on-ui
    (set-content-view! @main-activity
                       runtime-layout))
-  (fix-chart-view)
+  (setup-chart)
+  (deactivate-chart)
+  (activate-chart)
   (add-watch common/lux
              :lux-instant-runtime
              (fn [_key _ref _old new]
@@ -282,7 +278,10 @@
                (handle-peak new))))
 
 (defn deactivate-tab [& _args]
+  (swap! output-file-name identity* (read-field @main-activity ::filename))
   (remove-watch common/lux :lux-instant-runtime)
   (remove-watch peak-lux :lux-peak-runtime)
   (common/set-30s nil)
-  (fix-chart-view))
+  (deactivate-chart))
+
+#_(on-ui (.invalidate (find-view @main-activity ::runtime)))
