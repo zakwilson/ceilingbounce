@@ -35,7 +35,9 @@ If you're having trouble with your light not being detected, press the reset but
 
 You'll need an integrating device. Discussion of building integrating spheres can be found on CPF and BLF. Here, I'll show something more crude: the integrating *shoebox*.
 
-The shoebox should be white inside, or lined with white paper. There should be a slit cut for the phone and a hole for the light. The beam of the light should not hit the phone's light sensor directly. It should be possible to position the light and the phone the same way every time with some sort of visual reference. In my case, the bottom of the tab bar on the screen aligns with the wall of the box, and the bezel of the light aligns with the edge of the paper. It looks like [this](http://i.imgur.com/cjoP3D3.jpg) (lid open for illustration; it should be used with the lid closed).
+![](http://i.imgur.com/cjoP3D3.jpg)
+
+The shoebox should be white inside, or lined with white paper. There should be a slit cut for the phone and a hole for the light. The beam of the light should not hit the phone's light sensor directly. It should be possible to position the light and the phone the same way every time with some sort of visual reference. In my case, the bottom of the tab bar on the screen aligns with the wall of the box, and the bezel of the light aligns with the edge of the paper. It should be used with the lid closed.
 
 In the lumens tab, lux per lumen will default to 1, or you can set it to 1 and press the update button if you need to recalibrate. With several lights, follow the procedure for measuring lumens on a medium mode with known output. Record the output shown and divide by the known output. Enter the average of these ratios in the lux per lumen field and press update.
 
