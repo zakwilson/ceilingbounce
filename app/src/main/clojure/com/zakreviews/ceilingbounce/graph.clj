@@ -1,6 +1,6 @@
-(ns com.flashlightdb.ceilingbounce.graph
+(ns com.zakreviews.ceilingbounce.graph
   (:require [neko.threading :refer [on-ui]]
-            [com.flashlightdb.ceilingbounce.common :refer [main-activity
+            [com.zakreviews.ceilingbounce.common :refer [main-activity
                                                            identity*]])
   (:import [android.view ViewGroup$LayoutParams]
            [org.achartengine.chart PointStyle]
@@ -28,7 +28,7 @@
 ; gets evaluated at call time. It needs to generate a function and call it
 ; so that the compiler doesn't have to be able to represent obj.
 (defn call-method [obj method & args]
-  (binding [*ns* (the-ns 'com.flashlightdb.ceilingbounce.graph)]
+  (binding [*ns* (the-ns 'com.zakreviews.ceilingbounce.graph)]
     (let [mth (method-name method)
           mfn (eval `(fn [the-object#]
                        (~mth the-object# ~@args)))]

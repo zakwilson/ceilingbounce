@@ -1,4 +1,4 @@
-(ns com.flashlightdb.ceilingbounce.runtime
+(ns com.zakreviews.ceilingbounce.runtime
     (:require [neko.activity :refer [defactivity set-content-view!]]
               [neko.notify :as notify]
               [neko.resource :as res]
@@ -11,15 +11,16 @@
                :as a
                :refer [>! <! >!! <!! go chan buffer close! thread
                        alts! alts!! timeout]]
-              [com.flashlightdb.ceilingbounce.csv :as csv]
-              [com.flashlightdb.ceilingbounce.common :as common
+              [com.zakreviews.ceilingbounce.csv :as csv]
+              [com.zakreviews.ceilingbounce.common :as common
                :refer [identity*
                        config
                        main-activity
                        do-nothing
                        update-ui
                        read-field
-                       update-main]]
+                       update-main
+                       ui-tree* root-view*]]
               [amalloy.ring-buffer :refer [ring-buffer]]
               )
     (:import android.widget.EditText
@@ -34,7 +35,7 @@
              java.io.File
              neko.App)
     (:use overtone.at-at
-          com.flashlightdb.ceilingbounce.graph))
+          com.zakreviews.ceilingbounce.graph))
 
 (def peak-lux (atom 0))
 (def test-time (atom 0))
@@ -169,7 +170,7 @@
       (when-not (.exists (io/as-file dir-path))
         (.mkdirs (io/as-file dir-path)))
       (when-not (.exists (io/as-file csv-path))
-        (swap! lux-30s identity* lux)
+        (reset! lux-30s lux)
         (clear-chart live-chart)
         (future (doseq [p @output]
                   (add-reading (second p) (first p))))
@@ -190,7 +191,7 @@
 (defn stop-runtime-test [_evt]
   (remove-watch common/lux :runtime-watch)
   (future (save-chart (path @test-time "png")))
-  (swap! output identity* [])
+  (reset! output [])
   (stop-and-reset-pool! runtime-pool)
   (update-main ::runtime-test
              :text "Start runtime test"
@@ -202,7 +203,7 @@
         dir-path (get-dir-path)
         csv-path (path start-time "csv")]
     (swap! test-time max start-time)
-    (swap! lux-30s identity* @common/lux) ; start the graph with this, update later
+    (reset! lux-30s @common/lux) ; start the graph with this, update later
     (clear-chart live-chart)
     (call-setter (:multi-renderer live-chart)
                  :ChartTitle 
@@ -223,33 +224,37 @@
 
 (declare runtime-view)
 
-(def runtime-layout [:linear-layout (merge common/linear-layout-opts
-                                           {:id ::runtime})
-                     [:edit-text {:id ::filename
-                                  :hint "Name output file"
-                                  :text @output-file-name
-                                  :layout-width :fill}]
-                     [:button {:id ::runtime-test
-                               :text "Start runtime test"
-                               :on-click #'runtime-test}]
-                     [:text-view {:id ::lux-now
-                                  :text-size [48 :dip]}]
-                     [:relative-layout {:layout-width :fill
-                                        :layout-height :wrap
-                                        :layout-gravity 1}
-                      [:text-view {:text "Peak: "
-                                   :id ::peak-label}]
-                      [:text-view {:id ::lux-peak
-                                   :layout-to-right-of ::peak-label
-                                   :text "0"}]
-                      [:button {:id ::reset-button
-                                :text "Reset peak"
-                                :layout-below ::lux-peak
-                                :on-click #'reset-peak}]]
-                     [:linear-layout (merge common/linear-layout-opts
-                                            {:id ::chart
-                                             :layout-gravity 3
-                                             :layout-height :fill})]
+(def runtime-layout [:scroll-view {:id ::runtime
+                                   :layout-weight 1
+                                   :layout-width :fill}
+                     [:linear-layout {:layout-width :fill
+                                      :orientation :vertical}
+                      
+                      [:edit-text {:id ::filename
+                                   :hint "Name output file"
+                                   :text @output-file-name
+                                   :layout-width :fill}]
+                      [:button {:id ::runtime-test
+                                :text "Start runtime test"
+                                :on-click #'runtime-test}]
+                      [:text-view {:id ::lux-now
+                                   :text-size [48 :dip]}]
+                      [:relative-layout {:layout-width :fill
+                                         :layout-height :wrap
+                                         :layout-gravity 1}
+                       [:text-view {:text "Peak: "
+                                    :id ::peak-label}]
+                       [:text-view {:id ::lux-peak
+                                    :layout-to-right-of ::peak-label
+                                    :text "0"}]
+                       [:button {:id ::reset-button
+                                 :text "Reset peak"
+                                 :layout-below ::lux-peak
+                                 :on-click #'reset-peak}]]
+                      [:linear-layout (merge common/linear-layout-opts
+                                             {:id ::chart
+                                              :layout-gravity 3
+                                              :layout-height :fill})]]
                      ])
 
 (defn activate-chart []
@@ -263,27 +268,27 @@
                   (.removeView (:view live-chart)))
               (catch Exception e nil))))
 
-(defn activate-tab [& _args]
-  (on-ui
-   (set-content-view! @main-activity
-                      runtime-layout))
-  (setup-chart)
-  (deactivate-chart)
-  (activate-chart)
-  (add-watch common/lux
-             :lux-instant-runtime
-             (fn [_key _ref _old new]
-               (handle-lux new)))
-  (add-watch peak-lux
-             :lux-peak-runtime
-             (fn [_key _ref _old new]
-               (handle-peak new))))
+;; (defn activate-tab [& _args]
+;;   (on-ui
+;;    (set-content-view! @main-activity
+;;                       runtime-layout))
+;;   (setup-chart)
+;;   (deactivate-chart)
+;;   (activate-chart)
+;;   (add-watch common/lux
+;;              :lux-instant-runtime
+;;              (fn [_key _ref _old new]
+;;                (handle-lux new)))
+;;   (add-watch peak-lux
+;;              :lux-peak-runtime
+;;              (fn [_key _ref _old new]
+;;                (handle-peak new))))
 
-(defn deactivate-tab [& _args]
-  (swap! output-file-name identity* (read-field @main-activity ::filename))
-  (remove-watch common/lux :lux-instant-runtime)
-  (remove-watch peak-lux :lux-peak-runtime)
-  (common/set-30s nil)
-  (deactivate-chart))
+;; (defn deactivate-tab [& _args]
+;;   (swap! output-file-name identity* (read-field @main-activity ::filename))
+;;   (remove-watch common/lux :lux-instant-runtime)
+;;   (remove-watch peak-lux :lux-peak-runtime)
+;;   (common/set-30s nil)
+;;   (deactivate-chart))
 
 #_(on-ui (.invalidate (find-view @main-activity ::runtime)))

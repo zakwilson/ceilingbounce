@@ -1,4 +1,4 @@
-(ns com.flashlightdb.ceilingbounce.csv
+(ns com.zakreviews.ceilingbounce.csv
   (:import (java.io FileReader FileWriter BufferedReader File)))
 
 (defn quote-if-string [x]

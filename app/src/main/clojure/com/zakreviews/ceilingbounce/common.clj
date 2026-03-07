@@ -1,4 +1,4 @@
-(ns com.flashlightdb.ceilingbounce.common
+(ns com.zakreviews.ceilingbounce.common
   (:require [clojure.core.async
              :as a
              :refer [>! <! >!! <!! go chan buffer close! thread
@@ -7,16 +7,15 @@
             [neko.threading :refer [on-ui]]
             [neko.find-view :refer [find-view]]
             [amalloy.ring-buffer :refer [ring-buffer]]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [neko.reactive :refer [cell cell=]])
   (:use overtone.at-at)
-  (:import android.media.RingtoneManager))
+  (:import android.media.RingtoneManager
+           android.app.Activity))
 
 (defn do-nothing [])
 
-(defn play-notification []
-  (let [ringtone-uri (RingtoneManager/getDefaultUri RingtoneManager/TYPE_NOTIFICATION)
-        ringtone (RingtoneManager/getRingtone neko.App/instance ringtone-uri)]
-    (.play ringtone)))
+(defn play-notification [])
 
 (def storage-dir "/storage/emulated/0/ceilingbounce/")
 (def config-path (str storage-dir "config.edn"))
@@ -26,13 +25,22 @@
 (def main-activity (atom nil))
 
 (defn main-tag [x]
-  (keyword (str "com.flashlightdb.ceilingbounce.main/" x)))
+  (keyword (str "com.zakreviews.ceilingbounce.main/" x)))
 
 (defn identity* [_ replacement]
   replacement) 
 
+(def root-view* (atom nil))
 
-(def lux (atom 0))
+(def ui-tree*
+  (atom [:linear-layout {:id-holder true
+                    :orientation :vertical
+                    :padding [32 32 32 32]}
+         [:text-view {:text "Ceilingbounce 2"
+                      :text-size [24 :sp]}]]))
+
+(def lux (cell 0))
+(def lux= #(deref lux))
 
 (def linear-layout-opts
   {:orientation :vertical
@@ -41,7 +49,7 @@
 
 (def default-config {:lux-to-lumens 1 :effective-distance 1})
 
-(def config (atom default-config))
+(def config (cell default-config))
 
 (defn read-config
   ([] (read-config config-path))
@@ -70,7 +78,7 @@
 (defn update-main [identifier & updates]
   (apply (partial update-ui @main-activity identifier) updates))
 
-(defn read-field [activity identifier]
+(defn read-field [^Activity activity identifier]
   (.toString (.getText (find-view activity identifier))))
 
 (def at-pool (mk-pool))
