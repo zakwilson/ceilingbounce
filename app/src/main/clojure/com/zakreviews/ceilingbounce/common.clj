@@ -12,17 +12,20 @@
             [neko.reactive :refer [cell cell=]]
             [neko.data.shared-prefs :as prefs])
   (:use overtone.at-at)
-  (:import android.media.RingtoneManager
+  (:import [android.media AudioManager ToneGenerator]
            android.app.Activity))
 
 (defn do-nothing [])
 
-(defn play-notification [])
-
+(defn play-notification []
+  (let [tg (ToneGenerator. AudioManager/STREAM_MUSIC 10)]
+    (.startTone tg ToneGenerator/TONE_CDMA_LOW_L 150)
+    (Thread/sleep 200)
+    (.startTone tg ToneGenerator/TONE_CDMA_HIGH_L 150)))
 
 (prefs/defpreferences prefs* "prefs")
 (when (empty? @prefs*)
-  (reset! prefs {:lux-to-lumens 1 :effective-distance 1}))
+  (reset! prefs* {:lux-to-lumens 1 :effective-distance 1}))
 
 ;; FIXME remove
 (def storage-dir "/storage/emulated/0/ceilingbounce/")
