@@ -7,6 +7,7 @@
               [neko.log :as log]
               [neko.ui :as ui]
               [neko.ui.support.material]
+              [neko.ui.support.window-insets :as wini]
               [neko.reactive :refer [cell cell=]]
               neko.tools.repl
               [neko.ui.support.material]
@@ -38,65 +39,51 @@
              com.goodanser.clj_android.runtime.ClojureActivity
              neko.App))
 
-
 ;; We execute this function to import all subclasses of R class. This gives us
 ;; access to all application resources.
 (res/import-all)
 
+(defonce ^:private building? (volatile! false))
 
-(defn- setup-tabs!
-  "Adds tab items to the TabLayout after the UI tree is built."
-  [root]
-  (when-let [^TabLayout tabs (find-view root ::tabs)]
-    (let [t1 (doto (.newTab tabs) (.setText "Lumens"))
-          t2 (doto (.newTab tabs) (.setText "Throw"))
-          t3 (doto (.newTab tabs) (.setText "Runtime"))
-          t4 (doto (.newTab tabs) (.setText "Repl"))]
-      (on-ui (doseq [t [t1 t2 t3 t4]]
-               (.addTab tabs t))))))
+(declare reload-ui!)
+
+(defn rebuild-ui-tree! []
+  (vreset! building? true)
+  (reset! ui-tree*
+          [:linear-layout {:id-holder true
+                           :orientation :vertical
+                           :insets-padding :top}
+           [:tab-layout {:id ::tabs
+                         :tab-mode :fixed
+                         :tab-gravity :fill
+                         :layout-width :fill
+                         :tab-content ["Lumens" ::lumens/lumens
+                                       "Throw" ::throw/throw
+                                       "Runtime" ::runtime/runtime
+                                       "REPL" ::repl/repl
+                                       ]}]
+           lumens/lumens-layout
+           throw/throw-layout
+           runtime/runtime-layout
+           (repl/section-ui @main-activity ::repl/repl)
+           ])
+  (vreset! building? false)
+  (reload-ui!))
 
 (defn make-ui
-  "Builds the sample UI tree using neko's declarative DSL.
-  Called by ClojureActivity.reloadUi() and by on-create.
-  Reads the UI tree from *ui-tree if set, otherwise uses the default."
   [^Activity activity]
   (reset! main-activity activity)
   (let [root (ui/make-ui activity @ui-tree*)]
     (reset! root-view* root)
-    (setup-tabs! root)
     root))
 
 (defn on-create [^Activity activity saved-state]
+  (common/ensure-sensor activity)
+  (wini/enable-edge-to-edge! activity)
   (reset! main-activity activity)
-
-  (def sm (cast SensorManager (.getSystemService ^Activity activity "sensor")))
-  (def light-sensor (.getDefaultSensor ^SensorManager sm
-                                       (Sensor/TYPE_LIGHT)))
-  (def sensor-listener
-    (reify SensorEventListener
-      (onSensorChanged [activity evt]
-        (let [lux (first (.values evt))]
-          (reset! common/lux lux)))
-      (onAccuracyChanged [activity s a]
-        (do-nothing))))
-
   (neko.debug/keep-screen-on activity)
   (runtime/setup-chart)
-
-  (let [view (make-ui activity)]
-    (.setFitsSystemWindows view true)
-    (.setContentView activity view)
-    (repl/on-start-nrepl view)))
-
-(defn on-resume [^Activity activity]
-  (.registerListener ^SensorManager sm
-                     sensor-listener
-                     light-sensor
-                     200000))
-
-(defn on-pause [^Activity activity]
-  (.unregisterListener ^SensorManager sm sensor-listener)
-  (.superOnPause activity))
+  (rebuild-ui-tree!))
 
 (defn reload-ui!
   "Hot-reload the UI from the REPL. Uses ClojureActivity's
@@ -105,34 +92,7 @@
   (when-let [a @main-activity]
     (.reloadUi a)))
 
-(defn tab-handler [tab]
-  (when-let [root @root-view*]
-    (let [^View lumens (find-view root ::lumens/lumens)
-          ^View throw (find-view root ::throw/throw)
-          ^View runtime (find-view root ::runtime/runtime)
-          ^View repl (find-view root ::repl/repl)
-          target-idx (.getPosition tab)]
-      (if (every? identity [lumens throw runtime repl])
-        (doseq [[idx view] (map-indexed vector [lumens throw runtime repl])]
-          (on-ui
-           (if (= idx target-idx)
-             (.setVisibility view View/VISIBLE)
-             (.setVisibility view View/GONE))))))))
-
 (add-watch ui-tree* :ui-reload-watch
            (fn [_key _ref _old _new]
-             (reload-ui!)))
-
-(reset! ui-tree*
-        [:linear-layout {:id-holder true
-                         :orientation :vertical}
-         [:tab-layout {:id ::tabs
-                       :tab-mode :fixed
-                       :tab-gravity :fill
-                       :layout-width :fill
-                       :on-tab-selected tab-handler}]
-         lumens/lumens-layout
-         throw/throw-layout
-         runtime/runtime-layout
-         repl/repl-layout
-         ])
+             (when-not @building?
+               (reload-ui!))))

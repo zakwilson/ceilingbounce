@@ -8,7 +8,9 @@
             [neko.find-view :refer [find-view]]
             [amalloy.ring-buffer :refer [ring-buffer]]
             [clojure.java.io :as io]
-            [neko.reactive :refer [cell cell=]])
+            [neko.sensor :as sensor]
+            [neko.reactive :refer [cell cell=]]
+            [neko.data.shared-prefs :as prefs])
   (:use overtone.at-at)
   (:import android.media.RingtoneManager
            android.app.Activity))
@@ -17,10 +19,13 @@
 
 (defn play-notification [])
 
-(def storage-dir "/storage/emulated/0/ceilingbounce/")
-(def config-path (str storage-dir "config.edn"))
 
-(def main-ui-chan (chan 10))
+(prefs/defpreferences prefs* "prefs")
+(when (empty? @prefs*)
+  (reset! prefs {:lux-to-lumens 1 :effective-distance 1}))
+
+;; FIXME remove
+(def storage-dir "/storage/emulated/0/ceilingbounce/")
 
 (def main-activity (atom nil))
 
@@ -32,44 +37,23 @@
 
 (def root-view* (atom nil))
 
-(def ui-tree*
-  (atom [:linear-layout {:id-holder true
-                    :orientation :vertical
-                    :padding [32 32 32 32]}
-         [:text-view {:text "Ceilingbounce 2"
-                      :text-size [24 :sp]}]]))
+(def ui-tree* (atom []))
 
-(def lux (cell 0))
-(def lux= #(deref lux))
+(def lux-sensor* (cell [0]))
+(def lux= (cell= #(first @lux-sensor*)))
+(def luxs= (cell= #(str @lux=)))
+(def peak-lux* (cell 0))
+
+(defn ensure-sensor [ctx]
+  (def lux-sensor* (sensor/sensor-cell ctx :light)))
 
 (def linear-layout-opts
   {:orientation :vertical
    :layout-width :fill
    :layout-height :wrap})
 
-(def default-config {:lux-to-lumens 1 :effective-distance 1})
-
-(def config (cell default-config))
-
-(defn read-config
-  ([] (read-config config-path))
-  ([path]
-   (when (.exists (io/as-file path))
-       (swap! config merge
-              (read-string (slurp path))))))
-
-(defn write-config
-  ([conf] (write-config config-path conf))
-  ([path conf]
-   (.mkdirs (io/as-file storage-dir)) ; ensures the default dir exists, not path
-   (spit path conf)))
-
-(add-watch config :config-write-watch
-           (fn [ _key _ref _old new]
-             (write-config new)))
-
 (defn update-ui [activity identifier & updates]
-  (on-ui ; FIXME - fix, rather than silence errors
+  (on-ui                     ; FIXME - fix, rather than silence errors
    (try
      (apply (partial ui/config (find-view activity identifier))
             (flatten (into [] updates)))
@@ -86,16 +70,18 @@
 (defn average [a-seq]
   (/ (apply + a-seq) (count a-seq)))
 
+
+
+;; dead?
+
 (def thirty-second-task (atom (into (ring-buffer 1) [nil])))
 
-(def light-on-lux (* 10 (@config :lux-to-lumens)))
+(def light-on-lux (* 10 (@prefs :lux-to-lumens)))
 
 (def last-20 (atom (ring-buffer 20)))
 
-(def peak-lux (atom 0))
-
 (defn reset-peak []
-  (swap! peak-lux min 0))
+  (swap! peak-lux* min 0))
 
 (defn set-30s [func]
   (swap! thirty-second-task conj func))
@@ -112,7 +98,7 @@
                at-pool :desc "Restore 30s task")))))
 
 (defn handle-lux [lux]
-  (swap! peak-lux max lux)
+  (swap! peak-lux* max lux)
   (swap! last-20 conj lux)
   (when (and (> lux (* 2 (average @last-20)))
                     (> lux (* 1.5 (last (butlast @last-20))))
@@ -120,6 +106,6 @@
     (let [core-task (peek @thirty-second-task)]
       (after (* 30 1000) (make-30s core-task) at-pool :desc "Run 30s task"))))
 
-(add-watch lux :thirty-second-watch
+(add-watch lux= :peak-watch
            (fn [_key _ref _old new]
-             (handle-lux new)))
+             (swap! peak-lux* max new)))

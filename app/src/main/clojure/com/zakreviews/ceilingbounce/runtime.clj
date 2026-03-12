@@ -6,6 +6,7 @@
               [neko.threading :refer [on-ui]]
               [neko.log :as log]
               [neko.ui :as ui]
+              [neko.reactive :refer [cell cell=]]
               [clojure.java.io :as io]
               [clojure.core.async
                :as a
@@ -14,7 +15,7 @@
               [com.zakreviews.ceilingbounce.csv :as csv]
               [com.zakreviews.ceilingbounce.common :as common
                :refer [identity*
-                       config
+                       prefs*
                        main-activity
                        do-nothing
                        update-ui
@@ -37,23 +38,15 @@
     (:use overtone.at-at
           com.zakreviews.ceilingbounce.graph))
 
-(def peak-lux (atom 0))
+(def peak-lux (cell 0))
 (def test-time (atom 0))
 (def runtime-pool (mk-pool))
-(def output-file-name (atom "Name output file"))
-
-(defn handle-lux [lux]
-  (update-main ::lux-now
-               :text (str lux))
-  (swap! peak-lux max lux))
-
-(defn handle-peak [lux]
-  (update-main ::lux-peak
-               :text (str lux)))
+(def output-file-name (cell ""))
+(def lux-30s (cell 0))
 
 (defn reset-peak [_evt]
   (common/reset-peak)
-  (swap! peak-lux min 0))
+  (reset! peak-lux 0))
 
 (declare runtime-test)
 
@@ -66,14 +59,10 @@
 (defn minutes-since [start-time]
   (float (/ (nanos-since start-time) 60000000000)))
 
-#_(defn handle-lux-rt [lux start-time]
-  (let [offset (minutes-since start-time)]
-    (swap! output conj [lux offset])))
-
 (defn sample-lux []
-  (swap! output conj [@common/lux (minutes-since @test-time)]))
+  (swap! output conj [(first @common/lux=) (minutes-since @test-time)]))
 
-(def lux-30s (atom 0))
+
 
 (defn percent [lux]
   (if lux
@@ -84,6 +73,7 @@
   (csv/write-csv-line [lux minutes (percent lux)]
                       csv-path))
 
+;FIXME use SAF and filename cell
 (defn get-dir-name []
   (let [dirname (read-field @main-activity ::filename)]
     (if (empty? dirname)
@@ -189,7 +179,7 @@
              :desc "Sample the light meter reading"))))
 
 (defn stop-runtime-test [_evt]
-  (remove-watch common/lux :runtime-watch)
+  (remove-watch common/lux= :runtime-watch)
   (future (save-chart (path @test-time "png")))
   (reset! output [])
   (stop-and-reset-pool! runtime-pool)
@@ -203,7 +193,7 @@
         dir-path (get-dir-path)
         csv-path (path start-time "csv")]
     (swap! test-time max start-time)
-    (reset! lux-30s @common/lux) ; start the graph with this, update later
+    (reset! lux-30s @common/lux=) ; start the graph with this, update later
     (clear-chart live-chart)
     (call-setter (:multi-renderer live-chart)
                  :ChartTitle 
@@ -229,15 +219,16 @@
                                    :layout-width :fill}
                      [:linear-layout {:layout-width :fill
                                       :orientation :vertical}
-                      
                       [:edit-text {:id ::filename
                                    :hint "Name output file"
-                                   :text @output-file-name
+                                   :text (cell= #(deref output-file-name))
+                                   :on-text-change #(reset! output-file-name %)
                                    :layout-width :fill}]
                       [:button {:id ::runtime-test
                                 :text "Start runtime test"
                                 :on-click #'runtime-test}]
                       [:text-view {:id ::lux-now
+                                   :text common/luxs=
                                    :text-size [48 :dip]}]
                       [:relative-layout {:layout-width :fill
                                          :layout-height :wrap
@@ -246,7 +237,7 @@
                                     :id ::peak-label}]
                        [:text-view {:id ::lux-peak
                                     :layout-to-right-of ::peak-label
-                                    :text "0"}]
+                                    :text (cell= #(str @peak-lux))}]
                        [:button {:id ::reset-button
                                  :text "Reset peak"
                                  :layout-below ::lux-peak

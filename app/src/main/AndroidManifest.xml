@@ -3,7 +3,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
     <application
+        android:name="com.goodanser.clj_android.runtime.ClojureApp"
         android:label="Ceilingbounce"
         android:supportsRtl="true">
         <activity
@@ -16,9 +18,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".TestActivity"
-            android:label="Validation Tests"
-            android:exported="true" />
     </application>
 </manifest>

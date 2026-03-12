@@ -16,7 +16,7 @@
               [com.zakreviews.ceilingbounce.common
                :as common
                :refer [identity*
-                       config
+                       prefs*
                        main-activity
                        do-nothing
                        update-ui
@@ -38,14 +38,14 @@
 (defn update-conversion [& _args]
   (try
     (let [conversion (Float/parseFloat (read-field @main-activity ::conversion))]
-      (swap! config assoc :effective-distance conversion))
+      (swap! prefs* assoc :effective-distance conversion))
     (catch Exception e nil))
   (update-ui @main-activity ::conversion
-             :text (str (@config :effective-distance))))
+             :text (str (@prefs* :effective-distance))))
 
 (defn lux-to-cd [lux]
   (Math/round
-   (* lux (Math/pow (@config :effective-distance) 2))))
+   (* lux (Math/pow (@prefs* :effective-distance) 2))))
 
 (defn cd-to-m [cd]
   (Math/round (Math/sqrt (* 4 cd))))
@@ -67,14 +67,14 @@
   (when-not @watching-thirty
     (swap! watching-thirty identity* true)
     (common/play-notification)
-    (add-watch common/lux
+    (add-watch common/lux=
                :thirty-watch
                (fn [_key _ref _old new]
                  (update-thirty (lux-to-cd new))))
     (after (* 10 1000)
            (fn []
              (swap! watching-thirty identity* false)
-             (remove-watch common/lux :thirty-watch))
+             (remove-watch common/lux= :thirty-watch))
            at-pool)))
 
 (defn reset-peak [_evt]
@@ -107,7 +107,7 @@
      [:text-view {:id ::conversion-label
                   :text "Calculated distance: "}]
      [:edit-text {:id ::conversion
-                  :text (str (@config :effective-distance))
+                  :text (str (@prefs* :effective-distance))
                   :layout-weight 1
                   }]
      [:button {:text "Update"
@@ -164,7 +164,7 @@
 ;;    (set-content-view! @main-activity
 ;;                       throw-layout))
 ;;   (update-ui @main-activity ::conversion
-;;              :text (str (@config :effective-distance)))
+;;              :text (str (@prefs* :effective-distance)))
 ;;   (add-watch common/lux
 ;;              :throw-instant
 ;;              (fn [_key _ref _old new]
