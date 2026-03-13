@@ -13,102 +13,119 @@
             [neko.data.shared-prefs :as prefs])
   (:use overtone.at-at)
   (:import [android.media AudioManager ToneGenerator]
+           android.content.Context
            android.app.Activity))
-
-(defn do-nothing [])
-
-(defn play-notification []
-  (let [tg (ToneGenerator. AudioManager/STREAM_MUSIC 10)]
-    (.startTone tg ToneGenerator/TONE_CDMA_LOW_L 150)
-    (Thread/sleep 200)
-    (.startTone tg ToneGenerator/TONE_CDMA_HIGH_L 150)))
-
-(prefs/defpreferences prefs* "prefs")
-(when (empty? @prefs*)
-  (reset! prefs* {:lux-to-lumens 1 :effective-distance 1}))
-
-;; FIXME remove
-(def storage-dir "/storage/emulated/0/ceilingbounce/")
 
 (def main-activity (atom nil))
 
-(defn main-tag [x]
-  (keyword (str "com.zakreviews.ceilingbounce.main/" x)))
+(defn do-nothing [])
 
-(defn identity* [_ replacement]
-  replacement) 
+(prefs/defpreferences prefs* "prefs")
+
+(when (empty? @prefs*)
+  (reset! prefs* {:lux-to-lumens 1 :effective-distance 1 :use-sound true}))
+
+(defn parse-int [i]
+  (try (Integer/parseInt i)
+       (catch Exception e 0)))
+
+(defn parse-float [i]
+  (try (Float/parseFloat i)
+       (catch Exception e 0.0)))
+
+(defn get-volume []
+  (if (@prefs :use-sound)
+    (let [am (.getSystemService @main-activity Context/AUDIO_SERVICE)]
+      (.getStreamVolume am AudioManager/STREAM_MUSIC))
+    0))
+
+(defn play-start []
+  (let [tg (ToneGenerator. AudioManager/STREAM_MUSIC (get-volume))]
+    (.startTone tg ToneGenerator/TONE_CDMA_LOW_L 150)
+    (Thread/sleep 250)
+    (.startTone tg ToneGenerator/TONE_CDMA_HIGH_L 150)))
+
+(defn play-mid []
+  (let [tg (ToneGenerator. AudioManager/STREAM_MUSIC (get-volume))]
+    (.startTone tg ToneGenerator/TONE_CDMA_MED_L 150)
+    (Thread/sleep 250)
+    (.startTone tg ToneGenerator/TONE_CDMA_MED_L 150)
+    (Thread/sleep 250)
+    (.startTone tg ToneGenerator/TONE_CDMA_MED_L 150)))
+
+(defn play-end []
+  (let [tg (ToneGenerator. AudioManager/STREAM_MUSIC (get-volume))]
+    (.startTone tg ToneGenerator/TONE_CDMA_HIGH_L 150)
+    (Thread/sleep 250)
+    (.startTone tg ToneGenerator/TONE_CDMA_LOW_L 150)))
+
+(def play-notification play-mid)
+
+
+
+;; FIXME remove
+(def storage-dir "/storage/emulated/0/ceilingbounce/")
 
 (def root-view* (atom nil))
 
 (def ui-tree* (atom []))
 
-(def lux-sensor* (cell [0]))
-(def lux= (cell= #(first @lux-sensor*)))
-(def luxs= (cell= #(str @lux=)))
-(def peak-lux* (cell 0))
+(defn round [^Float n]
+  (Math/round n))
 
-(defn ensure-sensor [ctx]
-  (def lux-sensor* (sensor/sensor-cell ctx :light)))
+(def lux-sensor* (cell (cell [0])))
+(def lux= (cell= #(or (first @@lux-sensor*) 0))) ; guard against null during init
+(def luxs= (cell= #(str (round @lux=))))
+(def peak-lux* (cell 0))
+(def thirty* (cell 0))
+
+(defn activate-sensor [ctx]
+  (reset! lux-sensor* (sensor/sensor-cell ctx :light)))
 
 (def linear-layout-opts
   {:orientation :vertical
    :layout-width :fill
    :layout-height :wrap})
 
-(defn update-ui [activity identifier & updates]
-  (on-ui                     ; FIXME - fix, rather than silence errors
-   (try
-     (apply (partial ui/config (find-view activity identifier))
-            (flatten (into [] updates)))
-     (catch Exception e nil))))
-
-(defn update-main [identifier & updates]
-  (apply (partial update-ui @main-activity identifier) updates))
-
-(defn read-field [^Activity activity identifier]
-  (.toString (.getText (find-view activity identifier))))
-
 (def at-pool (mk-pool))
 
 (defn average [a-seq]
   (/ (apply + a-seq) (count a-seq)))
 
+(defn watch-peak []
+  (add-watch lux= :peak-watch
+             (fn [_key _ref _old new]
+               (swap! peak-lux* max new))))
 
+(defn unwatch-peak []
+  (remove-watch lux= :peak-watch))
 
-;; dead?
+(defn reset-peak [& _]
+  (reset! peak-lux* 0)
+  (reset! thirty* 0))
 
-(def thirty-second-task (atom (into (ring-buffer 1) [nil])))
+(def threshold-pool (mk-pool))
+(def threshold-watchers (cell #{}))
+(def threshold-running (cell false))
 
-(def light-on-lux (* 10 (@prefs :lux-to-lumens)))
+(defn start-threshold [threshold delay start-callback end-callback]
+  (let [watch-name (keyword (gensym))]
+    (swap! threshold-watchers conj watch-name)
+    (reset! threshold-running true)
+    (add-watch lux= watch-name
+               (fn [_key _ref _old new]
+                 (when (>= new threshold)
+                   (start-callback @lux=)
+                   (remove-watch lux= watch-name)
+                   (swap! threshold-watchers disj watch-name)
+                   (after (* delay 1000)
+                          #(do (when @threshold-running
+                                 (end-callback @lux=))
+                             (reset! threshold-running false))
+                          threshold-pool))))))
 
-(def last-20 (atom (ring-buffer 20)))
-
-(defn reset-peak []
-  (swap! peak-lux* min 0))
-
-(defn set-30s [func]
-  (swap! thirty-second-task conj func))
-
-(defn make-30s [core-task]
-  (fn []
-    (let [func (peek @thirty-second-task)]
-      (when func
-        (func)
-        (set-30s nil) ; debounce
-        (after (* 15 1000)
-               (fn []
-                 (set-30s core-task))
-               at-pool :desc "Restore 30s task")))))
-
-(defn handle-lux [lux]
-  (swap! peak-lux* max lux)
-  (swap! last-20 conj lux)
-  (when (and (> lux (* 2 (average @last-20)))
-                    (> lux (* 1.5 (last (butlast @last-20))))
-                    (> lux (max 10 (/ @peak-lux 2))))
-    (let [core-task (peek @thirty-second-task)]
-      (after (* 30 1000) (make-30s core-task) at-pool :desc "Run 30s task"))))
-
-(add-watch lux= :peak-watch
-           (fn [_key _ref _old new]
-             (swap! peak-lux* max new)))
+(defn abort-threshold []
+  (reset! threshold-running false)
+  (doseq [watch-name @threshold-watchers]
+    (remove-watch lux= watch-name))
+  (reset! threshold-watchers #{}))

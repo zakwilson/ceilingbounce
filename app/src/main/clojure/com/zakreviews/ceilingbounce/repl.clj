@@ -1,14 +1,13 @@
 (ns com.zakreviews.ceilingbounce.repl
-  (:require [neko.ui :as ui]
+  (:require 
             [neko.find-view :refer [find-view]]
             [neko.resource :refer [get-theme-color]]
             [neko.reactive :refer [cell cell=]]
-            [neko.ui.support.material]
             [neko.log :as log]
             [clj-android.repl.server :as repl-server]
             [com.zakreviews.ceilingbounce.common
                :as common
-             :refer [config main-activity do-nothing ui-tree* root-view*]])
+             :refer [main-activity ui-tree* root-view*]])
   (:import android.app.Activity
            android.view.View
            android.widget.EditText

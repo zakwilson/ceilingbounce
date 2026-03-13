@@ -1,99 +1,51 @@
 (ns com.zakreviews.ceilingbounce.throw
-    (:require [neko.activity :refer [defactivity set-content-view!]]
-              [neko.notify :as notify]
-              [neko.resource :as res]
-              [neko.find-view :refer [find-view]]
-              [neko.threading :refer [on-ui]]
-              [neko.log :as log]
-              [neko.ui :as ui]
-              [neko.ui.support.material]
+    (:require 
               [neko.reactive :refer [cell cell=]]
-              [clojure.java.io :as io]
-              [clojure.core.async
-               :as a
-               :refer [>! <! >!! <!! go chan buffer close! thread
-                       alts! alts!! timeout]]
-              [com.zakreviews.ceilingbounce.common
-               :as common
-               :refer [identity*
-                       prefs*
-                       main-activity
-                       do-nothing
-                       update-ui
-                       read-field
-                       at-pool
-                       average
-                       ui-tree* root-view*]]
               [amalloy.ring-buffer :refer [ring-buffer]]
               )
-    (:use overtone.at-at)
-    (:import android.widget.EditText
-             [android.app
-              Activity
-              Notification]
-             neko.App))
-
-(def peak-cd (cell 0))
-
-(defn update-conversion [& _args]
-  (try
-    (let [conversion (Float/parseFloat (read-field @main-activity ::conversion))]
-      (swap! prefs* assoc :effective-distance conversion))
-    (catch Exception e nil))
-  (update-ui @main-activity ::conversion
-             :text (str (@prefs* :effective-distance))))
+    (:use overtone.at-at
+          com.zakreviews.ceilingbounce.theme
+          com.zakreviews.ceilingbounce.common))
 
 (defn lux-to-cd [lux]
-  (Math/round
+  (round
    (* lux (Math/pow (@prefs* :effective-distance) 2))))
+
+(defn cd-to-lux [cd]
+  (round (/ (Math/sqrt cd) (@prefs* :effective-distance))))
 
 (defn cd-to-m [cd]
   (Math/round (Math/sqrt (* 4 cd))))
 
-(def peak-cd-thirty (cell 0))
+(def peak-cd= (cell= #(lux-to-cd @peak-lux*)))
+(def thirty-cd= (cell= #(lux-to-cd @thirty*)))
+(def cd= (cell= #(lux-to-cd @lux=)))
+(def m= (cell= #(cd-to-m @cd=)))
+(def threshold* (cell 100))
 
-(defn update-thirty [cd]
-  (swap! peak-cd-thirty max cd))
+(defn measure-throw [threshold]
+  (start-threshold (cd-to-lux threshold)
+                   30
+                   (fn [_lux]
+                     (play-start)
+                     (reset-peak)
+                     (watch-peak))
+                   (fn [lux]
+                     (play-mid)
+                     (unwatch-peak)
+                     (add-watch lux= :throw-watch
+                                (fn [_k _r _o n]
+                                  (swap! thirty* max n)))
+                     (after 10000
+                            (fn []
+                              (remove-watch lux= :throw-watch)
+                              (play-end))
+                            at-pool))))
 
-(defn handle-thirty [cd]
-  (update-ui @main-activity ::candela-thirty
-             :text (str cd))
-  (update-ui @main-activity ::throw-thirty
-             :text (str (cd-to-m cd))))
-
-(def watching-thirty (cell false))
-
-(defn watch-thirty []
-  (when-not @watching-thirty
-    (swap! watching-thirty identity* true)
-    (common/play-notification)
-    (add-watch common/lux=
-               :thirty-watch
-               (fn [_key _ref _old new]
-                 (update-thirty (lux-to-cd new))))
-    (after (* 10 1000)
-           (fn []
-             (swap! watching-thirty identity* false)
-             (remove-watch common/lux= :thirty-watch))
-           at-pool)))
-
-(defn reset-peak [_evt]
-  (swap! peak-cd min 0)
-  (swap! peak-cd-thirty min 0)
-  (common/reset-peak))
-
-(defn handle-lux [activity lux]
-  (let [cd (lux-to-cd lux)
-        m (cd-to-m cd)]
-    (update-ui activity ::candela-now
-               :text (str cd))
-    (swap! peak-cd max cd)))
-
-(defn handle-peak [activity cd]
-  (update-ui activity ::candela-peak
-             :text (str cd))
-  (update-ui activity ::throw-peak
-             :text (str (cd-to-m cd))))
+(defn measure-or-cancel [& _]
+  (if @threshold-running
+    (abort-threshold)
+    (measure-throw @threshold*)))
 
 (def throw-layout
   [:scroll-view {:id ::throw
@@ -101,87 +53,45 @@
                  :layout-width :fill}
    [:linear-layout {:layout-width :fill
                     :orientation :vertical}
+    [:text-view (t :big-text
+                   {:id ::candela-now
+                    :text (cell= #(str @cd=))})]
     [:linear-layout {:layout-width :fill
-                     :layout-height :wrap
+                     :layout-height :fill
                      :orientation :horizontal}
-     [:text-view {:id ::conversion-label
-                  :text "Calculated distance: "}]
-     [:edit-text {:id ::conversion
-                  :text (str (@prefs* :effective-distance))
-                  :layout-weight 1
-                  }]
-     [:button {:text "Update"
-               :id ::update-button
-               :on-click #'update-conversion}]]
-    [:text-view {:id ::candela-now
-                 :text-size [48 :dip]}]
-
-    [:button {:id ::reset-button
-              :text "Reset"
-              :on-click #'reset-peak}]
-    
+     [:text-view (t :normal-text
+                    {:text "Start when reading reaches: "})]
+     [:edit-text {:input-type :number
+                  :text (cell= #(str @threshold*))
+                  :min-width [96 :dip]
+                  :on-text-change #(reset! threshold* (parse-int %))}]]
+    [:button (t :normal-text
+                {:text (cell= #(if @threshold-running
+                                 "Cancel" "Measure"))
+                 :on-click measure-or-cancel})]
+    [:linear-layout {:min-height [96 :dip]}]
     [:relative-layout {:layout-width :fill
                        :layout-height :wrap}
-     [:text-view {:text "Peak cd: "
-                  :id ::candela-peak-label}]
-     [:text-view {:id ::candela-peak
-                  :layout-to-right-of ::candela-peak-label
-                  :text "0"}]
+     [:text-view {:text (cell= #(str "Peak cd: " @peak-cd=))
+                  :id ::candela-peak}]
      [:text-view {:text " | "
                   :id ::candela-separator
                   :layout-to-right-of ::candela-peak}]
-     [:text-view {:text "30s cd: "
+     [:text-view {:text (cell= #(str "30s cd: " @thirty-cd=))
                   :id ::candela-thirty-seconds
-                  :layout-to-right-of ::candela-separator}]
-     [:text-view {:text "0"
-                  :id ::candela-thirty
-                  :layout-to-right-of ::candela-thirty-seconds}]]
-    
+                  :layout-to-right-of ::candela-separator}]]
     [:relative-layout {:layout-width :fill
                        :layout-height :wrap
                        :layout-gravity 1}
-     [:text-view {:text "Peak m: "
-                  :id ::throw-peak-label}]
-     [:text-view {:id ::throw-peak
-                  :layout-to-right-of ::throw-peak-label
-                  :text "0"}]
+     [:text-view {:text (cell= #(str "Peak m: " (cd-to-m @peak-cd=)))
+                  :id ::throw-peak}]
      [:text-view {:text " | "
                   :id ::throw-separator
                   :layout-to-right-of ::throw-peak}]
-     [:text-view {:text "30s m: "
-                  :id ::throw-thirty-seconds
-                  :layout-to-right-of ::throw-separator}]
-     [:text-view {:text "0"
+     [:text-view {:text (cell= #(str "30s m: " (cd-to-m @thirty-cd=)))
                   :id ::throw-thirty
-                  :layout-to-right-of ::throw-thirty-seconds}]]]
+                  :layout-to-right-of ::throw-separator}]]
+    [:button {:id ::reset-button
+              :text "Reset"
+              :on-click #'reset-peak}]]
    ])
-
-
-;;dead
-
-;; (defn activate-tab [& _args]
-;;   (on-ui
-;;    (set-content-view! @main-activity
-;;                       throw-layout))
-;;   (update-ui @main-activity ::conversion
-;;              :text (str (@prefs* :effective-distance)))
-;;   (add-watch common/lux
-;;              :throw-instant
-;;              (fn [_key _ref _old new]
-;;                (handle-lux @main-activity new)))
-;;   (add-watch peak-cd
-;;              :cd-peak
-;;              (fn [_key _ref _old new]
-;;                (handle-peak @main-activity new)))
-;;   (add-watch peak-cd-thirty
-;;              :thirty-watch
-;;              (fn [_key _ref _old new]
-;;                (handle-thirty new)))
-;;   (common/set-30s watch-thirty))
-
-;; (defn deactivate-tab [& _args]
-;;   (remove-watch common/lux :throw-instant)
-;;   (remove-watch peak-cd :cd-peak)
-;;   (remove-watch common/lux :thirty-watch)
-;;   (remove-watch peak-cd-thirty :thirty-watch)
-;;   (common/set-30s nil))

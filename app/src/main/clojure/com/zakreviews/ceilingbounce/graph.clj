@@ -1,7 +1,6 @@
 (ns com.zakreviews.ceilingbounce.graph
   (:require [neko.threading :refer [on-ui]]
-            [com.zakreviews.ceilingbounce.common :refer [main-activity
-                                                           identity*]])
+            [com.zakreviews.ceilingbounce.common :refer [main-activity]])
   (:import [android.view ViewGroup$LayoutParams]
            [org.achartengine.chart PointStyle]
            [org.achartengine.model XYSeries]

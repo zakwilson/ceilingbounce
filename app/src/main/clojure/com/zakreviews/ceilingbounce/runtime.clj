@@ -14,13 +14,11 @@
                        alts! alts!! timeout]]
               [com.zakreviews.ceilingbounce.csv :as csv]
               [com.zakreviews.ceilingbounce.common :as common
-               :refer [identity*
+               :refer [lux=
+                       luxs=
+                       reset-peak
                        prefs*
                        main-activity
-                       do-nothing
-                       update-ui
-                       read-field
-                       update-main
                        ui-tree* root-view*]]
               [amalloy.ring-buffer :refer [ring-buffer]]
               )
@@ -36,17 +34,14 @@
              java.io.File
              neko.App)
     (:use overtone.at-at
-          com.zakreviews.ceilingbounce.graph))
+          com.zakreviews.ceilingbounce.graph
+          com.zakreviews.ceilingbounce.theme))
 
 (def peak-lux (cell 0))
 (def test-time (atom 0))
 (def runtime-pool (mk-pool))
-(def output-file-name (cell ""))
+(def output-file-name (cell "FIXME"))
 (def lux-30s (cell 0))
-
-(defn reset-peak [_evt]
-  (common/reset-peak)
-  (reset! peak-lux 0))
 
 (declare runtime-test)
 
@@ -75,10 +70,7 @@
 
 ;FIXME use SAF and filename cell
 (defn get-dir-name []
-  (let [dirname (read-field @main-activity ::filename)]
-    (if (empty? dirname)
-      "test"
-      dirname)))
+  "FIXME")
 
 (defn get-dir-path []
   (str common/storage-dir (get-dir-name) "/"))
@@ -140,7 +132,7 @@
         view (make-view @main-activity (:dataset live-chart) mrenderer)]
     (call-setter mrenderer
                  :ChartTitle 
-                 (read-field @main-activity ::filename))
+                 @output-file-name)
     (on-ui (doto view
              (.layout 0 0 1400 1050)
              (.draw canvas)
@@ -178,16 +170,17 @@
              runtime-pool
              :desc "Sample the light meter reading"))))
 
+(def running (cell false))
+
 (defn stop-runtime-test [_evt]
+  (reset! running false)
   (remove-watch common/lux= :runtime-watch)
   (future (save-chart (path @test-time "png")))
   (reset! output [])
-  (stop-and-reset-pool! runtime-pool)
-  (update-main ::runtime-test
-             :text "Start runtime test"
-             :on-click #'runtime-test))
+  (stop-and-reset-pool! runtime-pool))
 
 (defn runtime-test [_evt]
+  (reset! running true)
   (.mkdirs (io/as-file common/storage-dir))
   (let [start-time (. System nanoTime)
         dir-path (get-dir-path)
@@ -197,7 +190,7 @@
     (clear-chart live-chart)
     (call-setter (:multi-renderer live-chart)
                  :ChartTitle 
-                 (read-field @main-activity ::filename))
+                 @output-file-name)
     #_(add-watch common/lux :runtime-watch
                (fn [_key _ref _old new]
                  (handle-lux-rt new start-time)))
@@ -207,12 +200,7 @@
            :desc "Sample the light meter reading")
     (add-watch output :runtime-watch
                (fn [_key _ref _old new]
-                 (handle-output new dir-path csv-path)))
-    (update-main ::runtime-test
-            :text "Stop test"
-            :on-click #'stop-runtime-test)))
-
-(declare runtime-view)
+                 (handle-output new dir-path csv-path)))))
 
 (def runtime-layout [:scroll-view {:id ::runtime
                                    :layout-weight 1
@@ -225,11 +213,13 @@
                                    :on-text-change #(reset! output-file-name %)
                                    :layout-width :fill}]
                       [:button {:id ::runtime-test
-                                :text "Start runtime test"
+                                :text (cell= #(if @running
+                                                "Stop test"
+                                                "Start test"))
                                 :on-click #'runtime-test}]
-                      [:text-view {:id ::lux-now
-                                   :text common/luxs=
-                                   :text-size [48 :dip]}]
+                      [:text-view (t :big-text
+                                     {:id ::lux-now
+                                      :text luxs=})]
                       [:relative-layout {:layout-width :fill
                                          :layout-height :wrap
                                          :layout-gravity 1}
