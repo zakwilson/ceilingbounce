@@ -12,17 +12,15 @@
               neko.tools.repl
               [neko.ui.support.material]
               [clojure.java.io :as io]
-              [clojure.core.async
-               :as a
-               :refer [>! <! >!! <!! go chan buffer close! thread
-                       alts! alts!! timeout]]
               [com.zakreviews.ceilingbounce.runtime :as runtime]
               [com.zakreviews.ceilingbounce.lumens :as lumens]
               [com.zakreviews.ceilingbounce.throw :as throw]
               [com.zakreviews.ceilingbounce.repl :as repl]
+              [com.zakreviews.ceilingbounce.settings :as settings]
               [com.zakreviews.ceilingbounce.common
                :as common
-               :refer [identity* config main-activity do-nothing ui-tree* root-view*]])
+               :refer [main-activity do-nothing ui-tree* root-view*]])
+    (:use com.zakreviews.ceilingbounce.theme)
     (:import android.widget.EditText
              [android.hardware
               SensorManager
@@ -54,17 +52,19 @@
                            :orientation :vertical
                            :insets-padding :top}
            [:tab-layout {:id ::tabs
-                         :tab-mode :fixed
+                         :tab-mode :scrollable
                          :tab-gravity :fill
                          :layout-width :fill
                          :tab-content ["Lumens" ::lumens/lumens
                                        "Throw" ::throw/throw
                                        "Runtime" ::runtime/runtime
-                                       "REPL" ::repl/repl
+                                       "⚙️" ::settings/settings
+                                       "🛠️" ::repl/repl
                                        ]}]
            lumens/lumens-layout
            throw/throw-layout
            runtime/runtime-layout
+           settings/settings-layout
            (repl/section-ui @main-activity ::repl/repl)
            ])
   (vreset! building? false)
@@ -78,7 +78,7 @@
     root))
 
 (defn on-create [^Activity activity saved-state]
-  (common/ensure-sensor activity)
+  (common/activate-sensor activity)
   (wini/enable-edge-to-edge! activity)
   (reset! main-activity activity)
   (neko.debug/keep-screen-on activity)
