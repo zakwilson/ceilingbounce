@@ -2,9 +2,10 @@
 
 (def theme
   {:big-text {:text-size [72 :dip]}
+   :med-text {:text-size [36 :dip]}
    :normal-text {:text-size [18 :dip]}
-   :black {:color 0x000000FF}
-   :white {:color 0xFFFFFFFF}})
+   :black {:text-color 0x000000FF}
+   :white {:text-color 0xFFFFFFFF}})
 
 (defn t [& args]
   (let [theme-attribs (butlast args)

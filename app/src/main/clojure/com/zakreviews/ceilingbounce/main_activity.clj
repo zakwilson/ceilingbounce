@@ -92,6 +92,10 @@
   (when-let [a @main-activity]
     (.reloadUi a)))
 
+(defn on-activity-result [^Activity activity request-code result-code ^android.content.Intent data]
+  (when (= request-code settings/REQUEST_DIR)
+    (settings/on-dir-result result-code data)))
+
 (add-watch ui-tree* :ui-reload-watch
            (fn [_key _ref _old _new]
              (when-not @building?

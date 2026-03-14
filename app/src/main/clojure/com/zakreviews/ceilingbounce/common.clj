@@ -34,7 +34,7 @@
        (catch Exception e 0.0)))
 
 (defn get-volume []
-  (if (@prefs :use-sound)
+  (if (@prefs* :use-sound)
     (let [am (.getSystemService @main-activity Context/AUDIO_SERVICE)]
       (.getStreamVolume am AudioManager/STREAM_MUSIC))
     0))

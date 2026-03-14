@@ -48,7 +48,7 @@
      [:edit-text {:input-type :number
                   :text (cell= #(str @threshold*))
                   :min-width [96 :dip]
-                  :on-text-change #(reset! threshold* (parse-float %))}]]
+                  :on-text-change #(reset! threshold* (parse-int %))}]]
     [:button (t :normal-text
                 {:text (cell= #(if @threshold-running
                                  "Cancel" "Measure"))
