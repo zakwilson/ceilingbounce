@@ -18,12 +18,16 @@
 
 (def main-activity (atom nil))
 
-(defn do-nothing [])
+(def root-view* (atom nil))
+
+(def ui-tree* (atom [:linear-layout {}
+                     [:text-view {:text "Loading..."}]]))
+
+(defn do-nothing [& args])
 
 (prefs/defpreferences prefs* "prefs")
-
 (when (empty? @prefs*)
-  (reset! prefs* {:lux-to-lumens 1 :effective-distance 1 :use-sound true}))
+  (swap! prefs* #(merge {:lux-to-lumens 1 :effective-distance 1 :use-sound true} %)))
 
 (defn parse-int [i]
   (try (Integer/parseInt i)
@@ -66,9 +70,6 @@
 ;; FIXME remove
 (def storage-dir "/storage/emulated/0/ceilingbounce/")
 
-(def root-view* (atom nil))
-
-(def ui-tree* (atom []))
 
 (defn round [^Float n]
   (Math/round n))

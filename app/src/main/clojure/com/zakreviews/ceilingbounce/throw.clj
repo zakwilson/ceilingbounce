@@ -12,7 +12,8 @@
    (* lux (Math/pow (@prefs* :effective-distance) 2))))
 
 (defn cd-to-lux [cd]
-  (round (/ (Math/sqrt cd) (@prefs* :effective-distance))))
+  (try (round (/ (Math/sqrt cd) (@prefs* :effective-distance)))
+       (catch Exception e 0)))
 
 (defn cd-to-m [cd]
   (Math/round (Math/sqrt (* 4 cd))))

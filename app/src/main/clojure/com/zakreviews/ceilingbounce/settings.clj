@@ -1,25 +1,21 @@
 (ns com.zakreviews.ceilingbounce.settings
-  (:require [neko.reactive :refer [cell cell=]])
+  (:require [neko.reactive :refer [cell cell=]]
+            [neko.activity :as activity])
   (:use com.zakreviews.ceilingbounce.common)
   (:use com.zakreviews.ceilingbounce.theme)
-  (:import android.content.Intent
-           android.app.Activity))
+  (:import android.content.Intent))
 
-(def ^:const REQUEST_DIR 42)
-
-(defn select-dir []
-  (let [activity @main-activity
-        intent (Intent. Intent/ACTION_OPEN_DOCUMENT_TREE)]
-    (.startActivityForResult activity intent REQUEST_DIR)))
-
-(defn on-dir-result [result-code ^Intent data]
-  (when (= result-code Activity/RESULT_OK)
-    (let [activity @main-activity
-          uri (.getData data)
-          flags (bit-or Intent/FLAG_GRANT_READ_URI_PERMISSION
-                        Intent/FLAG_GRANT_WRITE_URI_PERMISSION)]
-      (.takePersistableUriPermission (.getContentResolver activity) uri flags)
-      (swap! prefs* assoc :directory (str uri)))))
+(defn select-dir [view]
+  (activity/start-activity-for-result
+   (.getContext view)
+   Intent/ACTION_OPEN_DOCUMENT_TREE
+   :on-result (fn [act _code data]
+                (when-let [uri (.getData data)]
+                  (swap! prefs* assoc :directory (str uri))
+                  (.takePersistableUriPermission uri
+                                                 (bit-or Intent/FLAG_GRANT_READ_URI_PERMISSION
+                                                         Intent/FLAG_GRANT_WRITE_URI_PERMISSION
+                                                         Intent/FLAG_GRANT_PERSISTABLE_URI_PERMISSION))))))
 
 (def settings-layout
   [:scroll-view {:id ::settings
@@ -59,8 +55,8 @@
                                       (swap! prefs* assoc :use-sound checked))}]
     [:text-view (t :med-text {:text "Data directory"})]
     [:text-view {:text (cell= #(str "Selected: "
-                                    (or (@prefs* :directory)
+                                    (or (:directory @prefs*)
                                         "(NONE)")))}]
     [:button {:text "Select directory"
-              :on-click (fn [_] (select-dir))}]
+              :on-click select-dir}]
     ]])

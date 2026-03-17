@@ -4,7 +4,8 @@
     (:use com.zakreviews.ceilingbounce.common))
 
 (defn lumens [lux]
-  (round (/ lux (@prefs* :lux-to-lumens))))
+  (try (round (/ lux (@prefs* :lux-to-lumens)))
+       (catch Exception e 0)))
 
 (defn lumens-to-lux [lumens]
   (* lumens (@prefs* :lux-to-lumens)))

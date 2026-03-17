@@ -58,8 +58,8 @@
                          :tab-content ["Lumens" ::lumens/lumens
                                        "Throw" ::throw/throw
                                        "Runtime" ::runtime/runtime
-                                       "⚙️" ::settings/settings
-                                       "🛠️" ::repl/repl
+                                       "Settings" ::settings/settings
+                                       "REPL" ::repl/repl
                                        ]}]
            lumens/lumens-layout
            throw/throw-layout
@@ -73,9 +73,11 @@
 (defn make-ui
   [^Activity activity]
   (reset! main-activity activity)
-  (let [root (ui/make-ui activity @ui-tree*)]
-    (reset! root-view* root)
-    root))
+  (try
+    (let [root (ui/make-ui activity @ui-tree*)]
+      (reset! root-view* root)
+      root)
+    (catch Exception e (log/e (ex-data e)))))
 
 (defn on-create [^Activity activity saved-state]
   (common/activate-sensor activity)
@@ -91,10 +93,6 @@
   []
   (when-let [a @main-activity]
     (.reloadUi a)))
-
-(defn on-activity-result [^Activity activity request-code result-code ^android.content.Intent data]
-  (when (= request-code settings/REQUEST_DIR)
-    (settings/on-dir-result result-code data)))
 
 (add-watch ui-tree* :ui-reload-watch
            (fn [_key _ref _old _new]
