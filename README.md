@@ -12,24 +12,14 @@ Despite the name, measurements taken by bouncing a light off the ceiling aren't 
 
 * **How do I install this?** - Google "android sideloading".
 * **Will all this calibration stuff be easier in a future release?** - yes
-* **Will it be in the Play store?** - Probably, eventually.
+* **Will it be in F-Droid?** - Probably.
+* **Will it be in the Play store?** - Probably not.
 * **Will there be an iOS version?** - No. I don't have an iOS dev setup, Apple bans apps that use the light sensor from the app store and there's no *reasonable* way to sideload.
 * **Can you explain how to...?** - It's probably in this README. Please read it twice before you ask your question.
 * **Do you take pull requests?** - Yes, but please say what it is you want to do before you start coding.
-* **Why does it take so long to load?** - The current release is built with a configuration more suitable for development than end-users; future releases should load faster at some point.
 * **This is too hard, will you hold my hand and walk me through using it?** - No, this is a pre-release intended for users with moderately high technical knowledge of both Android phones and photometrics.
 * **Is this a good substitute for real test equipment?** - Not really, but it sure beats eyeballing it, and does a decent job making graphs and logging data.
 * **Is this app a flashlight?** - NO! Stop using your phone as a flashlight. Why are you even here?
-
-## A note on light detection
-
-Several of the procedures described here call for turning on the light and waiting for something to happen after 30 seconds. There are certain limitations. The following will be detected as a light being turned on:
-
-* It's at least 10 lumens in your integrating device (or before calibration, 10 raw "lux" from the light meter, which may or may not be somewhere near 10 actual lux)
-* It's at least half the last peak value
-* It's at least twice the average of the last 20 values recorded (up to several values may be recorded per second)
-
-If you're having trouble with your light not being detected, press the reset button and it should start working.
 
 ### Calibrating lumens
 
@@ -77,15 +67,11 @@ Output files will not be overwritten if you run several tests with the same name
 
 ## Errata
 
-* Just opening the app in a bright environment can trigger 30 second events
-* Sometimes 30 second events are triggered more than once
-* Automatic light detection doesn't work with very low modes
 * Ceilingbounce will keep your screen on; it's intended to be used with the phone plugged in
-* Switching in and out of the app will always bring you back to the lumens tab
 * If your phone doesn't have a light meter, Ceilingbounce will probably crash on opening
 
 ## License
 
-Copyright © 2017 Zak Wilson
+Copyright © 2015-2026 Zak Wilson
 
-Distributed under the Eclipse Public License, the same as Clojure.
+Distributed under the GNU General Public License, version 3.
