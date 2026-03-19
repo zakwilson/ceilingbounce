@@ -50,9 +50,14 @@
                   }]]
     [:text-view (t :med-text {:text "Settings"})]
     [:check-box {:text "Use sound"
-                 :checked (cell= #(@prefs* :use-sound))
+                 :checked (cell= #(or (@prefs* :use-sound) false))
                  :on-checked-change (fn [_ checked]
                                       (swap! prefs* assoc :use-sound checked))}]
+    ;; [:check-box {:text "Aggressively poll sensor"
+    ;;              :checked (cell= #(or (@prefs* :aggressive) false))
+    ;;              :on-checked-change (fn [_ checked]
+    ;;                                   (swap! prefs* assoc :aggressive checked))}]
+    ;; [:text-view {:text "Might fix jagged graphs, requires restart"}]
     [:text-view (t :med-text {:text "Data directory"})]
     [:text-view {:text (cell= #(str "Selected: "
                                     (or (:directory @prefs*)

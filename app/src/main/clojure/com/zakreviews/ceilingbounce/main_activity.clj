@@ -84,7 +84,6 @@
   (wini/enable-edge-to-edge! activity)
   (reset! main-activity activity)
   (neko.debug/keep-screen-on activity)
-  (runtime/setup-chart)
   (rebuild-ui-tree!))
 
 (defn reload-ui!

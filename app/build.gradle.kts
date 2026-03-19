@@ -47,6 +47,7 @@ dependencies {
     implementation("org.clojure:core.async:1.8.741")
     implementation("amalloy:ring-buffer:1.3.1")
     implementation("overtone:at-at:1.2.0")
-    implementation("org.achartengine:achartengine:1.2.0")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("com.androidplot:androidplot-core:1.5.11")
+    implementation("com.halfhp.fig:figlib:1.0.11")
 }

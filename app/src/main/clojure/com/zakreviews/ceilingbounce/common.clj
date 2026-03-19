@@ -116,13 +116,13 @@
     (add-watch lux= watch-name
                (fn [_key _ref _old new]
                  (when (>= new threshold)
-                   (start-callback @lux=)
+                   (start-callback new)
                    (remove-watch lux= watch-name)
                    (swap! threshold-watchers disj watch-name)
                    (after (* delay 1000)
                           #(do (when @threshold-running
                                  (end-callback @lux=))
-                             (reset! threshold-running false))
+                               (reset! threshold-running false))
                           threshold-pool))))))
 
 (defn abort-threshold []
