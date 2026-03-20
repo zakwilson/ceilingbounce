@@ -33,12 +33,13 @@
               XYPlot
               XYGraphWidget$Edge
               LineAndPointFormatter
-              BoundaryMode]
+              BoundaryMode
+              StepMode]
              com.androidplot.ui.Insets
              java.text.DecimalFormat
              [android.graphics Paint$Align]
              android.view.ViewGroup$LayoutParams
-             android.view.ViewGroup$LayoutParams
+             android.view.View$MeasureSpec
              )
     (:use overtone.at-at
           com.zakreviews.ceilingbounce.common          
@@ -123,86 +124,99 @@
                  :positive-button ["OK" do-nothing]}
                 ))
 
-(declare plot series)
+(def plot (atom nil))
+(def series (SimpleXYSeries. ""))
 
-(defn make-chart []
-  (def plot (XYPlot. @main-activity @output-file-name=))
-  (on-ui
-   (.setLayoutParams plot
-                     (ViewGroup$LayoutParams. ViewGroup$LayoutParams/MATCH_PARENT
-                                              ViewGroup$LayoutParams/MATCH_PARENT)))
-  (def series (SimpleXYSeries. ""))
-  (def formatter (LineAndPointFormatter. (unchecked-int 0xFFFF4500) nil nil nil))
-  (.addSeries ^XYPlot plot ^SimpleXYSeries series ^LineAndPointFormatter formatter)
-  (let [title-paint (.getLabelPaint (.getTitle plot))]
-    (.setTextSize title-paint 64)
-    (.setColor title-paint Color/WHITE))
-  (.setMargins (.getTitle plot ) 0 60 0 0)
-  (.setVisible (.getLegend plot) false)
-  (.setColor (.getBackgroundPaint plot) Color/BLACK)
-  (.setColor (.getBackgroundPaint (.getGraph plot)) Color/BLACK)
-  (.setColor (.getGridBackgroundPaint (.getGraph plot)) (unchecked-int 0x88111111))
-  (.setRangeLabel plot (@plot-type
-                        {:percent "Relative Output"
-                         :lumens "Lumens"
-                         :raw "Lux"}))
-  (.setDomainLabel plot "Minutes")
-  (.setPlotPadding plot (float 30) (float 5) (float 5) (float 30))
-  (doseq [label [(.getDomainTitle plot) (.getRangeTitle plot)]]
-    (let [paint (.getLabelPaint label)]
-      (.setTextSize paint 32)
-      (.setColor paint Color/WHITE)))
-  ;; Line labels on left and bottom edges
-  (.setLinesPerRangeLabel plot 2)
-  (.setLinesPerDomainLabel plot 2)
-  (.setRangeLowerBoundary plot 0 BoundaryMode/FIXED)
-  (.setDomainLowerBoundary plot 0 BoundaryMode/FIXED)
-  (let [g (.getGraph plot)]
-    (.setLineLabelEdges g (into-array [XYGraphWidget$Edge/BOTTOM XYGraphWidget$Edge/LEFT]))
-    (let [style (.getLineLabelStyle g XYGraphWidget$Edge/BOTTOM)]
-      (doto (.getPaint style)
-        (.setColor Color/WHITE) (.setTextSize 24)
-        (.setTextAlign Paint$Align/CENTER))
-      (.setFormat style (DecimalFormat. "0.#")))
-    (let [style (.getLineLabelStyle g XYGraphWidget$Edge/LEFT)]
-      (doto (.getPaint style)
-        (.setColor Color/WHITE) (.setTextSize 24)
-        (.setTextAlign Paint$Align/RIGHT))
-      (.setFormat style (DecimalFormat. "#")))
-    ;; Graph margins (left, top, right, bottom) - room for line labels
-    (.setMargins g (float 40) (float 80) (float 10) (float 40))
-    ;(.setLineLabelInsets g (Insets. (float 0) (float 5) (float 5) (float -5)))
-    )
-  )
+(defn make-chart
+  ([] (make-chart series))
+  ([s]
+   (let [plot (XYPlot. @main-activity @output-file-name=)
+         g (.getGraph plot)
+         bottom-style (.getLineLabelStyle g XYGraphWidget$Edge/BOTTOM)
+         left-style (.getLineLabelStyle g XYGraphWidget$Edge/LEFT)
+         formatter (LineAndPointFormatter. (unchecked-int 0xFFFF4500) nil nil nil)]
+     (.setLineLabelEdges g (into-array [XYGraphWidget$Edge/BOTTOM XYGraphWidget$Edge/LEFT]))
+     (doto (.getPaint bottom-style)
+       (.setColor Color/WHITE) (.setTextSize 24)
+       (.setTextAlign Paint$Align/CENTER))
+     (.setFormat bottom-style (DecimalFormat. "0.#"))
+     (doto (.getPaint left-style)
+       (.setColor Color/WHITE) (.setTextSize 24)
+       (.setTextAlign Paint$Align/RIGHT))
+     (.setFormat left-style (DecimalFormat. "#"))
+     (.setMargins g (float 36) (float 64) (float 8) (float 36))
+                                        ;(.setLineLabelInsets g (Insets. (float 0) (float 5) (float 5) (float -5)))
+     (on-ui
+      (.setLayoutParams plot
+                        (ViewGroup$LayoutParams. ViewGroup$LayoutParams/MATCH_PARENT
+                                                 ViewGroup$LayoutParams/MATCH_PARENT)))
+     (.addSeries ^XYPlot plot ^SimpleXYSeries s ^LineAndPointFormatter formatter)
+     (let [title-paint (.getLabelPaint (.getTitle plot))]
+       (.setTextSize title-paint 32)
+       (.setColor title-paint Color/WHITE))
+     (.setMargins (.getTitle plot ) 0 60 0 0)
+     (.setVisible (.getLegend plot) false)
+     (.setColor (.getBackgroundPaint plot) Color/BLACK)
+     (.setColor (.getBackgroundPaint (.getGraph plot)) Color/BLACK)
+     (.setColor (.getGridBackgroundPaint (.getGraph plot)) (unchecked-int 0x88111111))
+     (.setRangeLabel plot (@plot-type
+                           {:percent "Relative Output"
+                            :lumens "Lumens"
+                            :raw "Lux"}))
+     (.setDomainLabel plot "Minutes")
+     (.setPlotPadding plot (float 35) (float 5) (float 5) (float 40))
+     (doseq [label [(.getDomainTitle plot) (.getRangeTitle plot)]]
+       (let [paint (.getLabelPaint label)]
+         (.setTextSize paint 24)
+         (.setColor paint Color/WHITE)))
+     ;; Line labels on left and bottom edges
+     (.setLinesPerRangeLabel plot 1)
+     (.setLinesPerDomainLabel plot 1)
+     (.setRangeStep plot StepMode/INCREMENT_BY_PIXELS 60)
+     (.setDomainStep plot StepMode/INCREMENT_BY_PIXELS 80)
+     (.setRangeLowerBoundary plot 0 BoundaryMode/FIXED)
+     (.setDomainLowerBoundary plot 0 BoundaryMode/FIXED)
+     plot)))
 
-(defn activate-chart []
+(defn activate-chart [c]
   (on-ui (try (let [container (find-view @root-view* ::chart)]
                 (.removeAllViews container)
-                (.addView container plot))
+                (.addView container c))
               (catch Exception e nil))))
 
 (defn set-chart-title [title]
-  (.setTitle plot title)
-  (on-ui (.redraw ^XYPlot plot)))
+  (.setTitle @plot title)
+  (on-ui (.redraw ^XYPlot @plot)))
 
 (defn add-point [x y]
   (.addLast ^SimpleXYSeries series (double x) (double y))
-  (on-ui (.redraw ^XYPlot plot)))
+  (on-ui (.redraw ^XYPlot @plot)))
 
 (defn clear-chart []
   (while (> (.size series) 0)
     (.removeLast series))
-  (on-ui (.redraw ^XYPlot plot)))
+  (on-ui (.redraw ^XYPlot @plot)))
+
 
 (defn write-chart-png [file]
-  (let [w (.getWidth plot)
-        h (.getHeight plot)
+  (let [w 2000
+        h 1200
+        export-series (SimpleXYSeries. "")
+        _ (doseq [i (range (.size series))]
+            (.addLast ^SimpleXYSeries export-series
+                      (.getX series i)
+                      (.getY series i)))
+        export-plot (make-chart export-series)
+        _ (.measure export-plot
+                    (android.view.View$MeasureSpec/makeMeasureSpec w android.view.View$MeasureSpec/EXACTLY)
+                    (android.view.View$MeasureSpec/makeMeasureSpec h android.view.View$MeasureSpec/EXACTLY))
+        _ (.layout export-plot 0 0 w h)
         bitmap (Bitmap/createBitmap w h Bitmap$Config/ARGB_8888)
         canvas (Canvas. bitmap)
         os (-> @main-activity
                .getContentResolver
                (.openOutputStream (.getUri file)))]
-    (.draw plot canvas)
+    (.draw export-plot canvas)
     (try
       (.compress bitmap Bitmap$CompressFormat/PNG 100 os)
       (finally
@@ -242,25 +256,44 @@
     (stop-and-reset-pool! runtime-pool)
     (abort-threshold)))
 
-(defn runtime-test [& _]
-  (reset! dir
-          (mkdir (Uri/parse (@prefs* :directory)) @output-file-name=))
-  (make-chart)
-  (activate-chart)
-  (reset! thirty* @lux=)
-  (let [start-time (. System nanoTime)]
+(defn runtime-loop [interval]
+  (let [start-time (. System nanoTime)
+        stop-check (atom (ring-buffer 5))]
     (swap! test-time max start-time)
-    (reset! csv-file (mkfile @dir (str @output-file-name= "-" @test-time ".csv") "text/csv"))
-    (reset! png-file (mkfile @dir (str @output-file-name= "-" @test-time ".png") "image/png"))
-    (every 1000
-           #(do (sample-lux)
-                (plot-point (minutes-since @test-time) @lux=))
+    (every interval
+           (fn []
+             (sample-lux)
+             (plot-point (minutes-since @test-time) @lux=)
+             (when (> (minutes-since @test-time) (* 5000 interval))
+               (stop-and-reset-pool! runtime-pool
+                                     (runtime-loop (* 10 interval))))
+             (swap! stop-check conj (dyn-val @lux=))
+             (when (every? #(< (dyn-val %) @end-threshold)
+                           @stop-check)
+               (stop-runtime-test)))
            runtime-pool
-           :desc "Sample the light meter reading")
-    (add-watch lux= :runtime-end-watch
-               (fn [_k _r _o n]
-                 (when (< (dyn-val n) @end-threshold)
-                   (stop-runtime-test))))))
+           :desc "Sample the light meter reading")))
+
+(defn runtime-test [& _]
+  (let [the-dir (mkdir (Uri/parse (@prefs* :directory))
+                 @output-file-name=)]
+    (if-not the-dir ; no permission or bad dir path
+      (do (swap! @prefs* dissoc :directory)
+          (dir-unset-alert))
+      (do 
+        (reset! dir the-dir)
+        (clear-chart)
+        (reset! plot (make-chart))
+        (activate-chart @plot)
+        (reset! thirty* @lux=)
+        (reset! csv-file (mkfile @dir
+                                 (str @output-file-name= "-" (. System nanoTime) ".csv")
+                                 "text/csv"))
+        (reset! png-file (mkfile
+                          @dir
+                          (str @output-file-name= "-" (. System nanoTime) ".png")
+                          "image/png"))
+        (runtime-loop 1000)))))
 
 (defn reset-thirty [& _]
   (reset! thirty* @lux=)
@@ -309,11 +342,11 @@
                        [:text-view {:text "Start at: "} ]
                        [:edit-text {:text (str @begin-threshold)
                                     :on-text-change #(reset! begin-threshold
-                                                             (Integer/parseInt %))}]
+                                                             (parse-int %))}]
                        [:text-view {:text "End at: "}]
                        [:edit-text {:text (str @end-threshold)
                                     :on-text-change #(reset! end-threshold
-                                                             (Integer/parseInt %))}]
+                                                             (parse-int %))}]
                        ]
                       [:radio-group {:orientation :horizontal
                                      :layout-height :fill}
@@ -344,7 +377,3 @@
                       ]
                      
                      ])
-
-
-
-
