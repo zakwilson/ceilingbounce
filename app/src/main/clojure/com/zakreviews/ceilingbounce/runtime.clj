@@ -144,7 +144,7 @@
        (.setColor Color/WHITE) (.setTextSize 24)
        (.setTextAlign Paint$Align/RIGHT))
      (.setFormat left-style (DecimalFormat. "#"))
-     (.setMargins g (float 36) (float 64) (float 8) (float 36))
+     (.setMargins g (float 64) (float 64) (float 8) (float 36))
                                         ;(.setLineLabelInsets g (Insets. (float 0) (float 5) (float 5) (float -5)))
      (on-ui
       (.setLayoutParams plot
@@ -157,7 +157,9 @@
      (.setMargins (.getTitle plot ) 0 60 0 0)
      (.setVisible (.getLegend plot) false)
      (.setColor (.getBackgroundPaint plot) Color/BLACK)
-     (.setColor (.getBackgroundPaint (.getGraph plot)) Color/BLACK)
+     (doto (.getBackgroundPaint (.getGraph plot))
+       (.setColor Color/BLACK)
+       (.setStrokeWidth 1.0))
      (.setColor (.getGridBackgroundPaint (.getGraph plot)) (unchecked-int 0x88111111))
      (.setRangeLabel plot (@plot-type
                            {:percent "Relative Output"

@@ -28,7 +28,6 @@
                      :layout-height :wrap
                      :orientation :horizontal}
      [:text-view {:id ::conversion-label
-                  :text-color 0xFFFFFFFF
                   :text "Lux per lumen: "}]
      [:edit-text {:id ::conversion
                   :text (str (@prefs* :lux-to-lumens))
