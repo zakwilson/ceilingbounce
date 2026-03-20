@@ -31,7 +31,7 @@
                   :text-color 0xFFFFFFFF
                   :text "Lux per lumen: "}]
      [:edit-text {:id ::conversion
-                  :text (cell= #(str (@prefs* :lux-to-lumens)))
+                  :text (str (@prefs* :lux-to-lumens))
                   :on-text-change #(swap! prefs* assoc :lux-to-lumens
                                           (parse-float %))
                   :layout-width :fill
@@ -43,7 +43,7 @@
      [:text-view {:id ::conversion-label
                   :text "Calculated distance: "}]
      [:edit-text {:id ::conversion
-                  :text (cell= #(str (@prefs* :effective-distance)))
+                  :text (str (@prefs* :effective-distance))
                   :on-text-change #(swap! prefs* assoc :effective-distance
                                           (parse-float %))
                   :layout-weight 1
