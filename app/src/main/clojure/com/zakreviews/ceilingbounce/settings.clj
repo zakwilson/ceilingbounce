@@ -31,6 +31,7 @@
                   :text "Lux per lumen: "}]
      [:edit-text {:id ::conversion
                   :text (str (@prefs* :lux-to-lumens))
+                  :input-type :number
                   :on-text-change #(swap! prefs* assoc :lux-to-lumens
                                           (parse-float %))
                   :layout-width :fill
@@ -42,6 +43,7 @@
      [:text-view {:id ::conversion-label
                   :text "Calculated distance: "}]
      [:edit-text {:id ::conversion
+                  :input-type :number
                   :text (str (@prefs* :effective-distance))
                   :on-text-change #(swap! prefs* assoc :effective-distance
                                           (parse-float %))

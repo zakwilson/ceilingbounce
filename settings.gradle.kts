@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "clojure-android-sample"
+rootProject.name = "ceilingbounce"
 include(":app")
 
 // ---------------------------------------------------------------------------

@@ -72,14 +72,12 @@
 
 (defn make-ui
   [^Activity activity]
-  (reset! main-activity activity)
-  (try
-    (let [root (ui/make-ui activity @ui-tree*)]
-      (reset! root-view* root)
-      root)
-    (catch Exception e (log/e (ex-data e)))))
+  (let [root (ui/make-ui activity @ui-tree*)]
+    (reset! root-view* root)
+    root))
 
 (defn on-create [^Activity activity saved-state]
+  (reset! main-activity activity)
   (common/activate-sensor activity)
   (wini/enable-edge-to-edge! activity)
   (reset! main-activity activity)

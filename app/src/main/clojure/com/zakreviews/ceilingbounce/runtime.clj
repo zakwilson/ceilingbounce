@@ -343,10 +343,12 @@
                                        :layout-width :fill}
                        [:text-view {:text "Start at: "} ]
                        [:edit-text {:text (str @begin-threshold)
+                                    :input-type :number
                                     :on-text-change #(reset! begin-threshold
                                                              (parse-int %))}]
                        [:text-view {:text "End at: "}]
                        [:edit-text {:text (str @end-threshold)
+                                    :input-type :number
                                     :on-text-change #(reset! end-threshold
                                                              (parse-int %))}]
                        ]
