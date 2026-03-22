@@ -245,6 +245,7 @@
 
 (defn stop-runtime-test [& _]
   (reset! running false)
+  (play-stop)
   (let [csv-writer (future (write-csv-file @output @csv-file))
         png-writer (future (write-chart-png @png-file))]
     (try @csv-writer
@@ -282,7 +283,8 @@
     (if-not the-dir ; no permission or bad dir path
       (do (swap! @prefs* dissoc :directory)
           (dir-unset-alert))
-      (do 
+      (do
+        (play-start)
         (reset! dir the-dir)
         (clear-chart)
         (reset! plot (make-chart))
