@@ -286,8 +286,8 @@
       (do
         (play-start)
         (reset! dir the-dir)
-        (clear-chart)
         (reset! plot (make-chart))
+        (clear-chart)
         (activate-chart @plot)
         (reset! thirty* @lux=)
         (reset! csv-file (mkfile @dir
