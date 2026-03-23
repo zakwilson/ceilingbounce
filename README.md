@@ -2,6 +2,10 @@
 
 Flashlight testing and runtime graphs for Android
 
+## Keep Android Open
+
+Google plans to prevent most Android users from installing apps unless the developer registers with Google, giving Google the power to ban developers and apps it doesn't like. See https://keepandroidopen.org/ for what you can do about it.
+
 ## Usage
 
 Ceilingbounce uses the light sensor in your phone as a light meter for flashlight testing. The light meter in your phone is not accurate, so you must calibrate it if you want anything but relative numbers. Calibration should be done with a freshly charged battery on medium modes with several lights. Ideally, the same light should be tested with calibrated equipment, but if a test is available of the same *model* using calibrated equipment, that's better than nothing.
@@ -78,8 +82,8 @@ Output files will not be overwritten if you run several tests with the same name
 
 ## Errata
 
-* Ceilingbounce will keep your screen on; it's intended to be used with the phone plugged in
-* If your phone doesn't have a light meter, Ceilingbounce will probably crash on opening
+* Ceilingbounce will keep your screen on and probably use a fair amount of battery; it's intended to be used with the phone plugged in
+* Ceilingbounce forces a dark theme regardless of your settings; light from the screen can affect the reading
 
 ## License
 

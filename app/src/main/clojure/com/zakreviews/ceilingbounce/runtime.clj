@@ -245,7 +245,7 @@
 
 (defn stop-runtime-test [& _]
   (reset! running false)
-  (play-stop)
+  (play-end)
   (let [csv-writer (future (write-csv-file @output @csv-file))
         png-writer (future (write-chart-png @png-file))]
     (try @csv-writer

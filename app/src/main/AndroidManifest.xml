@@ -7,7 +7,10 @@
     <application
         android:name="com.goodanser.clj_android.runtime.ClojureApp"
         android:label="Ceilingbounce"
-        android:supportsRtl="true">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
         <activity
             android:name=".MainActivity"
             android:label="Ceilingbounce"

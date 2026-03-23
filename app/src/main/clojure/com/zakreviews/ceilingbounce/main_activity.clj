@@ -11,6 +11,7 @@
               [neko.reactive :refer [cell cell=]]
               neko.tools.repl
               [neko.ui.support.material]
+              [clj-android.repl.server :refer [repl-available?]]
               [clojure.java.io :as io]
               [com.zakreviews.ceilingbounce.runtime :as runtime]
               [com.zakreviews.ceilingbounce.lumens :as lumens]
@@ -55,17 +56,23 @@
                          :tab-mode :scrollable
                          :tab-gravity :fill
                          :layout-width :fill
-                         :tab-content ["Lumens" ::lumens/lumens
-                                       "Throw" ::throw/throw
-                                       "Runtime" ::runtime/runtime
-                                       "Settings" ::settings/settings
-                                       "REPL" ::repl/repl
-                                       ]}]
+                         :tab-content (if (repl-available?)
+                                        ["Lumens" ::lumens/lumens
+                                         "Throw" ::throw/throw
+                                         "Runtime" ::runtime/runtime
+                                         "Settings" ::settings/settings
+                                         "REPL" ::repl/repl
+                                         ]
+                                        ["Lumens" ::lumens/lumens
+                                         "Throw" ::throw/throw
+                                         "Runtime" ::runtime/runtime
+                                         "Settings" ::settings/settings])}]
            lumens/lumens-layout
            throw/throw-layout
            runtime/runtime-layout
            settings/settings-layout
-           (repl/section-ui @main-activity ::repl/repl)
+           (when (repl-available?)
+             (repl/section-ui @main-activity ::repl/repl))
            ])
   (vreset! building? false)
   (reload-ui!))

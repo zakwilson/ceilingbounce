@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="colorSurface">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+        <item name="colorBackgroundFloating">@android:color/black</item>
+    </style>
 </resources>
