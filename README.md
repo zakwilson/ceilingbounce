@@ -90,3 +90,7 @@ Output files will not be overwritten if you run several tests with the same name
 Copyright © 2015-2026 Zak Wilson
 
 Distributed under the GNU General Public License, version 3.
+
+## Links
+
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/ceilingbounce)
