@@ -276,7 +276,7 @@
                (stop-and-reset-pool! runtime-pool
                                      (runtime-loop (* 10 interval))))
              (swap! stop-check conj (dyn-val @lux=))
-             (when (every? #(< (dyn-val %) @end-threshold)
+             (when (every? #(< % @end-threshold)
                            @stop-check)
                (stop-runtime-test)))
            runtime-pool
