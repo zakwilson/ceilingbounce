@@ -169,7 +169,7 @@
      (.setRangeLabel plot (@plot-type
                            {:percent "Relative Output"
                             :lumens "Lumens"
-                            :raw "Lux"}))
+                            :lux "Lux"}))
      (.setDomainLabel plot "Minutes")
      (.setPlotPadding plot (float 35) (float 5) (float 5) (float 40))
      (doseq [label [(.getDomainTitle plot) (.getRangeTitle plot)]]
@@ -265,9 +265,7 @@
     (abort-threshold)))
 
 (defn runtime-loop [interval]
-  (let [start-time (. System nanoTime)
-        stop-check (atom (ring-buffer 5))]
-    (swap! test-time max start-time)
+  (let [stop-check (atom (ring-buffer 5))]
     (every interval
            (fn []
              (sample-lux)
@@ -295,6 +293,7 @@
         (clear-chart)
         (activate-chart @plot)
         (reset! thirty* @lux=)
+        (reset! test-time  (. System nanoTime))
         (reset! csv-file (mkfile @dir
                                  (str @output-file-name= "-" (. System nanoTime) ".csv")
                                  "text/csv"))
@@ -336,6 +335,14 @@
         (reset! plot-type plot-type) ;force redraw view
         (reset! plot-type type)))))
 
+(defn start-unit [type]
+  (if (= :lumens type)
+    "lumens"
+    "lux"))
+
+(defn end-unit [type]
+  (-> type symbol str))
+
 (def runtime-layout [:scroll-view {:id ::runtime
                                    :layout-weight 1
                                    :layout-width :fill}
@@ -350,16 +357,20 @@
                                    }]
                       [:linear-layout {:orientation :horizontal
                                        :layout-width :fill}
-                       [:text-view {:text "Start at: "} ]
+                       [:text-view {:text  "Start at: "} ]
                        [:edit-text {:text (str @begin-threshold)
-                                    :input-type :number
+                                    :input-type :integer
+                                    :min-width [72 :dip]
                                     :on-text-change #(reset! begin-threshold
                                                              (parse-int %))}]
-                       [:text-view {:text "End at: "}]
+                       [:text-view {:text (cell= #(start-unit @plot-type))}]
+                       [:text-view {:text " | End at: "}]
                        [:edit-text {:text (str @end-threshold)
-                                    :input-type :number
+                                    :input-type :integer
+                                    :min-width [72 :dip]
                                     :on-text-change #(reset! end-threshold
                                                              (parse-int %))}]
+                       [:text-view {:text (cell= #(end-unit @plot-type))}]
                        ]
                       [:radio-group {:orientation :horizontal
                                      :layout-height :fill}
@@ -370,8 +381,8 @@
                                        :checked (cell= #(= :lumens @plot-type))
                                        :on-checked-change (set-plot-type :lumens)}]
                        [:radio-button {:text "Raw"
-                                       :checked (cell= #(= :raw @plot-type))
-                                       :on-checked-change (set-plot-type :raw)}]]
+                                       :checked (cell= #(= :lux @plot-type))
+                                       :on-checked-change (set-plot-type :lux)}]]
                       
                       [:linear-layout {:id ::chart
                                        :layout-width :fill
@@ -381,12 +392,12 @@
                       [:text-view {:id ::lux-now
                                    :text (cell= #(str "Raw sensor reading: " @luxs=))}]
                       [:button {:id ::runtime-test
-                                 :text (cell= #(if @running
-                                                 "Stop test"
-                                                 "Start test"))
-                                 :on-click #(if @running
-                                              (stop-runtime-test %)
-                                              (start-runtime-test %))}]
+                                :text (cell= #(if @running
+                                                "Stop test"
+                                                "Start test"))
+                                :on-click #(if @running
+                                             (stop-runtime-test %)
+                                             (start-runtime-test %))}]
                       ]
                      
                      ])

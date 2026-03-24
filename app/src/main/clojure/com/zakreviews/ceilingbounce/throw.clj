@@ -62,8 +62,8 @@
                      :orientation :horizontal}
      [:text-view (t :normal-text
                     {:text "Start when reading reaches: "})]
-     [:edit-text {:input-type :number
-                  :text (cell= #(str @threshold*))
+     [:edit-text {:input-type :integer
+                  :text (str @threshold*)
                   :min-width [96 :dip]
                   :on-text-change #(reset! threshold* (parse-int %))}]]
     [:button (t :normal-text
