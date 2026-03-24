@@ -40,9 +40,9 @@
     [:linear-layout {:layout-width :fill
                      :layout-height :wrap
                      :orientation :horizontal}
-     [:text-view {:id ::conversion-label
+     [:text-view {:id ::distance-label
                   :text "Calculated distance: "}]
-     [:edit-text {:id ::conversion
+     [:edit-text {:id ::distance
                   :input-type :number
                   :text (str (@prefs* :effective-distance))
                   :on-text-change #(swap! prefs* assoc :effective-distance

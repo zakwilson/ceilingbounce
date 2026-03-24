@@ -106,7 +106,9 @@
         (.write os (.getBytes (seq->csv [(first v)
                                          (second v)
                                          (percent (first v))])
-                              "UTF-8"))))))
+                              "UTF-8")))
+      (catch Throwable t (log/e (.getMessage t)))
+      (finally (.close os)))))
 
 (defn dir-unset-alert []
   (dialog/alert @main-activity
@@ -130,7 +132,10 @@
 (defn make-chart
   ([] (make-chart series))
   ([s]
-   (let [plot (XYPlot. @main-activity @output-file-name=)
+   (let [p (promise)
+         _ (on-ui (deliver p ; view constructor outside UI thread might crash
+                          (XYPlot. @main-activity @output-file-name=)))
+         plot @p
          g (.getGraph plot)
          bottom-style (.getLineLabelStyle g XYGraphWidget$Edge/BOTTOM)
          left-style (.getLineLabelStyle g XYGraphWidget$Edge/LEFT)
@@ -250,8 +255,8 @@
         png-writer (future (write-chart-png @png-file))]
     (try @csv-writer
          @png-writer
-         (catch Exception e
-           (log/e (ex-data e))))
+         (catch Throwable t
+           (log/e (.getMessage t))))
     (reset! output [])
     (reset! dir nil)
     (reset! csv-file nil)
@@ -297,7 +302,9 @@
                           @dir
                           (str @output-file-name= "-" (. System nanoTime) ".png")
                           "image/png"))
-        (runtime-loop 1000)))))
+        (if-not (and @csv-file @png-file)
+          (dir-unset-alert)
+          (runtime-loop 1000))))))
 
 (defn reset-thirty [& _]
   (reset! thirty* @lux=)
