@@ -12,10 +12,10 @@
    :on-result (fn [act _code data]
                 (when-let [uri (.getData data)]
                   (swap! prefs* assoc :directory (str uri))
-                  (.takePersistableUriPermission uri
-                                                 (bit-or Intent/FLAG_GRANT_READ_URI_PERMISSION
-                                                         Intent/FLAG_GRANT_WRITE_URI_PERMISSION
-                                                         Intent/FLAG_GRANT_PERSISTABLE_URI_PERMISSION))))))
+                  (-> @main-activity .getContentResolver
+                      (.takePersistableUriPermission uri
+                                                     (bit-or Intent/FLAG_GRANT_READ_URI_PERMISSION
+                                                             Intent/FLAG_GRANT_WRITE_URI_PERMISSION)))))))
 
 (def settings-layout
   [:scroll-view {:id ::settings
