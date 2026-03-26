@@ -357,23 +357,29 @@
                                    }]
                       [:linear-layout {:orientation :horizontal
                                        :layout-width :fill}
-                       [:text-view {:text  "Start at: "} ]
-                       [:edit-text {:text (str @begin-threshold)
-                                    :input-type :integer
-                                    :min-width [72 :dip]
-                                    :on-text-change #(reset! begin-threshold
-                                                             (parse-int %))}]
-                       [:text-view {:text (cell= #(start-unit @plot-type))}]
-                       [:text-view {:text " | End at: "}]
-                       [:edit-text {:text (str @end-threshold)
-                                    :input-type :integer
-                                    :min-width [72 :dip]
-                                    :on-text-change #(reset! end-threshold
-                                                             (parse-int %))}]
-                       [:text-view {:text (cell= #(end-unit @plot-type))}]
-                       ]
+                       [:linear-layout {:orientation :horizontal
+                                        :layout-width :wrap}
+                        [:text-view {:text  "Start at: "} ]
+                        [:edit-text {:text (str @begin-threshold)
+                                     :input-type :integer
+                                     :min-width [72 :dip]
+                                     :on-text-change #(reset! begin-threshold
+                                                              (parse-int %))}]
+                        [:text-view {:text (cell= #(start-unit @plot-type))}]]
+                       [:linear-layout {:layout-width [0 :dp]
+                                        :layout-weight 1}]
+                       [:linear-layout {:orientation :horizontal
+                                        :layout-width :wrap}
+                        [:text-view {:text "End at: "}]
+                        [:edit-text {:text (str @end-threshold)
+                                     :input-type :integer
+                                     :min-width [72 :dip]
+                                     :on-text-change #(reset! end-threshold
+                                                              (parse-int %))}]
+                        [:text-view {:text (cell= #(end-unit @plot-type))}]]]
                       [:radio-group {:orientation :horizontal
-                                     :layout-height :fill}
+                                     :layout-width :fill
+                                     :layout-height :wrap}
                        [:radio-button {:text "Percent"
                                        :checked (cell= #(= :percent @plot-type))
                                        :on-checked-change (set-plot-type :percent)}]
@@ -383,12 +389,9 @@
                        [:radio-button {:text "Raw"
                                        :checked (cell= #(= :lux @plot-type))
                                        :on-checked-change (set-plot-type :lux)}]]
-                      
                       [:linear-layout {:id ::chart
                                        :layout-width :fill
-                                       :layout-height [300 :dip]
-                                       }
-                       ]
+                                       :layout-height [300 :dip]}]
                       [:text-view {:id ::lux-now
                                    :text (cell= #(str "Raw sensor reading: " @luxs=))}]
                       [:button {:id ::runtime-test
@@ -398,7 +401,4 @@
                                 :on-click #(if @running
                                              (future
                                                (stop-runtime-test %))
-                                             (start-runtime-test %))}]
-                      ]
-                     
-                     ])
+                                             (start-runtime-test %))}]]])
