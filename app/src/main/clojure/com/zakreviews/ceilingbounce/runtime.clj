@@ -251,6 +251,8 @@
 (defn stop-runtime-test [& _]
   (reset! running false)
   (play-end)
+  (stop-and-reset-pool! runtime-pool)
+  (abort-threshold)
   (let [csv-writer (future (write-csv-file @output @csv-file))
         png-writer (future (write-chart-png @png-file))]
     (try @csv-writer
@@ -260,9 +262,7 @@
     (reset! output [])
     (reset! dir nil)
     (reset! csv-file nil)
-    (reset! png-file nil)
-    (stop-and-reset-pool! runtime-pool)
-    (abort-threshold)))
+    (reset! png-file nil)))
 
 (defn runtime-loop [interval]
   (let [stop-check (atom (ring-buffer 5))]
@@ -396,7 +396,8 @@
                                                 "Stop test"
                                                 "Start test"))
                                 :on-click #(if @running
-                                             (stop-runtime-test %)
+                                             (future
+                                               (stop-runtime-test %))
                                              (start-runtime-test %))}]
                       ]
                      
