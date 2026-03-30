@@ -1,0 +1,1 @@
+Ceilingbounce uses the phone's ambient light sensor to estimate output and intensity of flashlights, and to generate graphs of their output over time. Manual calibration is required for accurate readings.
