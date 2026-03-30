@@ -74,6 +74,9 @@ fun ensureDep(name: String): java.io.File? {
         } catch (_: Exception) {
             // Non-fatal — the existing checkout is still usable.
         }
+        // Remove stale build artifacts so F-Droid's scanner doesn't flag them.
+        val buildDir = java.io.File(dir, "build")
+        if (buildDir.isDirectory) buildDir.deleteRecursively()
         propagateLocalProperties(dir)
         return dir
     }
