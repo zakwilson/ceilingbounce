@@ -18,6 +18,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            vcsInfo.include = false
         }
     }
 
@@ -38,6 +39,12 @@ android {
 
 clojureOptions {
     warnOnReflection.set(true)
+}
+
+tasks.whenTaskAdded {
+    if (name.contains("ArtProfile")) {
+        enabled = false
+    }
 }
 
 dependencies {
