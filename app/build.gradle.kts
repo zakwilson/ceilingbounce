@@ -9,20 +9,27 @@ android {
 
     defaultConfig {
         applicationId = "com.zakreviews.ceilingbounce"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 35
         versionCode = 5
         versionName = "0.3.3"
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             vcsInfo.include = false
         }
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -39,6 +46,8 @@ android {
 
 clojureOptions {
     warnOnReflection.set(true)
+    replEnabled.set(false)
+    dynamicCompilationEnabled.set(false)
 }
 
 tasks.whenTaskAdded {
@@ -57,4 +66,5 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.androidplot:androidplot-core:1.5.11")
     implementation("com.halfhp.fig:figlib:1.0.11")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.4")
 }
