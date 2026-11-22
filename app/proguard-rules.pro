@@ -1,0 +1,43 @@
+-keep class com.google.android.material.R$* { *; }
+-keep class com.google.android.material.** { *; }
+-keep class com.zakreviews.ceilingbounce** { *; }
+-keep class clojure.** { *; }
+-keep class neko.** { *; }
+-keep class clj_android.** { *; }
+-keep class amalloy.ring_buffer** { *; }
+-keep class overtone.at_at** { *; }
+-keep class androidx.core.view.** { *; }
+-keep class androidx.documentfile.provider.** { *; }
+-keep class com.androidplot.xy.** { *; }
+-keep class com.androidplot.ui.** { *; }
+-dontobfuscate
+
+-dontwarn java.awt.BorderLayout
+-dontwarn java.awt.Component
+-dontwarn java.awt.Container
+-dontwarn java.awt.LayoutManager
+-dontwarn java.awt.Window
+-dontwarn java.beans.BeanInfo
+-dontwarn java.beans.FeatureDescriptor
+-dontwarn java.beans.Introspector
+-dontwarn java.beans.PropertyDescriptor
+-dontwarn javax.swing.JButton
+-dontwarn javax.swing.JEditorPane
+-dontwarn javax.swing.JFrame
+-dontwarn javax.swing.JPanel
+-dontwarn javax.swing.JScrollPane
+-dontwarn javax.swing.JTable
+-dontwarn javax.swing.JToolBar
+-dontwarn javax.swing.event.HyperlinkEvent$EventType
+-dontwarn javax.swing.event.HyperlinkEvent
+-dontwarn javax.swing.event.HyperlinkListener
+-dontwarn javax.swing.event.TableModelEvent
+-dontwarn javax.swing.event.TableModelListener
+-dontwarn javax.swing.event.TreeModelListener
+-dontwarn javax.swing.table.AbstractTableModel
+-dontwarn javax.swing.table.TableModel
+-dontwarn javax.swing.text.Document
+-dontwarn javax.swing.text.JTextComponent
+-dontwarn javax.swing.text.html.HTMLFrameHyperlinkEvent
+-dontwarn javax.swing.tree.TreeModel
+-dontwarn javax.swing.tree.TreePath

@@ -11,16 +11,21 @@ android {
         applicationId = "com.zakreviews.ceilingbounce"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.3.4"
+        versionCode = 7
+        versionName = "0.3.5"
         multiDexEnabled = true
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             vcsInfo.include = false
+            
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 

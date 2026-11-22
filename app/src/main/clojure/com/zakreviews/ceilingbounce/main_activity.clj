@@ -10,7 +10,6 @@
               [neko.ui.support.window-insets :as wini]
               [neko.reactive :refer [cell cell=]]
               neko.tools.repl
-              [neko.ui.support.material]
               [clj-android.repl.server :refer [repl-available?]]
               [clojure.java.io :as io]
               [com.zakreviews.ceilingbounce.runtime :as runtime]
